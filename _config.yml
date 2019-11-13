@@ -12,3 +12,6 @@ plugins:
 
 disqus:
   shortname: gcnyin
+
+minima:
+  date_format: "%Y-%m-%d"
