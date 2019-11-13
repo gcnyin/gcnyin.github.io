@@ -25,13 +25,16 @@ permalink: /tags/
 {% endfor %}
 
 {% for tag in tags %}
+	<a style="color: #6a9fb5; padding: 0.1rem 0.5rem; margin-right: .5rem; background: rgba(106,159,181,0.15);" href="#{{ tag | slugify }}"> {{ tag }} </a>
+{% endfor %}
+
+{% for tag in tags %}
 	<p id="{{ tag | slugify }}">{{ tag }}</p>
-	<ul>
+	<ul style="list-style: none;">
 	 {% for post in site.posts %}
 		 {% if post.tags contains tag %}
 		 <li>
 		 <p>
-		 <span>{{ post.date | date: "%Y-%m-%d" }}</span>
 		 <a href="{{ post.url }}">
 		 {{ post.title | escape }}
 		 </a>
