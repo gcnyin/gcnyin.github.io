@@ -2,7 +2,7 @@
 layout: post
 title:  "配置vim来写Haskell"
 date:   2019-09-08 12:35:00 +0800
-tags: [vim, haskell]
+tags: [Vim, Haskell]
 ---
 
 第一步当初是安装vim，推荐使用比较新的8.1+版本。
