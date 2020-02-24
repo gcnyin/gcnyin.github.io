@@ -59,7 +59,7 @@ console.log(JSON.stringify(rule.accept("hello   world!!!")));
       ],
       "name": "HELLO_WORLD"
     }
-  }
+}
   
 ```
 
