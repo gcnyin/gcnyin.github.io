@@ -2,7 +2,8 @@
 layout: post
 title:  "mini-parser小轮子"
 date:   2019-11-06 18:00:00 +0800
-tags: [Compiler, TypeScript]
+tags: [typescript, parser combinator, parser]
+category: 编译原理
 ---
 
 [代码链接](https://github.com/gcnyin/compiler/blob/master/mini-parser/index.ts)
@@ -65,4 +66,4 @@ console.log(JSON.stringify(rule.accept("hello   world!!!")));
 
 当然，这离真正可用还有很远：
 
-![honghongjie](/assets/v2-c069d4cbd52e184334fa54705ca29ec3_r.jpg)
+![honghongjie](/assets/honghongjiedejiaodao.jpg)

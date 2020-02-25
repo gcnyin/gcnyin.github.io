@@ -2,7 +2,8 @@
 layout: post
 title:  "JVM if<cond>指令笔记"
 date:   2019-09-13 12:35:00 +0800
-tags: [JVM]
+tags: [jvm]
+category: 编译原理
 ---
 
 ```
@@ -11,7 +12,7 @@ format: if<cond> branchByte1 branchByte2
 
 从栈中弹出一个值，和0进行比较，根据指令的不同，有不同的比较方法得出一个值，如果为假，则顺序执行后面的指令。那为真的呢？：
 
-branchByte1 branchByte2 都是 0x00 - 0xFF 之间的一个 unsigned 值，可以用他俩算出来”offset“作为 true branch 的入口，公式为：
+branchByte1 branchByte2 都是 0x00 - 0xFF 之间的一个 unsigned 值，可以用他俩算出来offset作为true branch的入口，公式为：
 
 ```
 (branchbyte1 << 8) | branchbyte2

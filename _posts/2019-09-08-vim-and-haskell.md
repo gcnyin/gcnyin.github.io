@@ -2,7 +2,8 @@
 layout: post
 title:  "配置vim来写Haskell"
 date:   2019-09-08 12:35:00 +0800
-tags: [Vim, Haskell]
+tags: [vim, haskell, vim-plug, vim-plugin]
+category: vim
 ---
 
 第一步当初是安装vim，推荐使用比较新的8.1+版本。
