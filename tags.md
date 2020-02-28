@@ -25,7 +25,7 @@ permalink: /tags/
 {% endfor %}
 
 {% for tag in tags %}
-	<a style="color: #6a9fb5; padding: 0.1rem 0.5rem; margin-right: .5rem; background: rgba(106,159,181,0.15);" href="#{{ tag | slugify }}"> {{ tag }} </a>
+	<a href="#{{ tag | slugify }}"><span class="badge badge-primary">{{ tag }}</span></a>
 {% endfor %}
 
 {% for tag in tags %}
