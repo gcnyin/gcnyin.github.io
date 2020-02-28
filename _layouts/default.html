@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        {% if page.title %}
+        {{ page.title | escape }}
+        {% else %}
+        {{ site.title | escape }}
+        {% endif %}
+    </title>
+    <link rel="stylesheet" href="{{site.baseurl}}/assets/css/github-markdown.css">
+    <link rel="stylesheet" href="https://cdn.rawgit.com/PhilipTrauner/pygments-github-css/master/github.css" />
+</head>
+
+<body>
+    <div class="markdown-body">
+        {{ content }}
+    </div>
+</body>
+
+</html>
