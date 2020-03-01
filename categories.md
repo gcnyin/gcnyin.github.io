@@ -19,7 +19,7 @@ permalink: /categories/
 {% assign applied_categories = applied_categories_raw | split:'|' %}
 
 {% for category in applied_categories %}
-    <a href="#{{ category | slugify }}"><span class="badge badge-success">{{ category }}</span></a>
+    <a href="#{{ category | slugify }}"><span class="badge badge-success"><i class="fa fa-hashtag"></i>&nbsp;{{ category }}</span></a>
 {% endfor %}
 
 {% for category in applied_categories %}

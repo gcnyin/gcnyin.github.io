@@ -7,6 +7,15 @@
     <title>
         {{ site.title | append: ' | ' | append: page.title}}
     </title>
+    <script>
+        var _hmt = _hmt || [];
+        (function () {
+            var hm = document.createElement("script");
+            hm.src = "https://hm.baidu.com/hm.js?58169a2976fd75ac01f523420119718c";
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hm, s);
+        })();
+    </script>
     <link href="https://cdn.bootcss.com/twitter-bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.slim.min.js"></script>
     <script src="https://cdn.bootcss.com/popper.js/1.16.1/umd/popper.min.js"></script>
@@ -68,7 +77,7 @@
                     {% assign applied_categories = applied_categories_raw | split:'|' %}
 
                     {% for category in applied_categories %}
-                    <span class="badge badge-success">{{ category }}</span>
+                    <span class="badge badge-success"><i class="fa fa-hashtag"></i>&nbsp;{{ category }}</span>
                     {% endfor %}
                 </p>
                 <h2>Tags</h2>
@@ -93,7 +102,7 @@
                     {% endfor %}
 
                     {% for tag in tags %}
-                    <span class="badge badge-primary">{{ tag }}</span>
+                    <span class="badge badge-primary"><i class="fa fa-tag"></i>&nbsp;{{ tag }}</span>
                     {% endfor %}
                 </p>
             </div>

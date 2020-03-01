@@ -6,7 +6,7 @@ layout: default
     <p>
         <i class="fa fa-calendar"></i>
         <span>{{ page.date | date: "%Y/%m/%d %H:%M" }}</span>
-        <span class="badge badge-success">{{ page.category }}</span>
+        <span class="badge badge-success"><i class="fa fa-hashtag"></i>&nbsp;{{ page.category }}</span>
         {% for tag in page.tags %}
         <span class="badge badge-primary"><i class="fa fa-tag"></i>&nbsp;{{ tag }}</span>
         {% endfor %}
