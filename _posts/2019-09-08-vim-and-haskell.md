@@ -6,24 +6,20 @@ tags: [vim, haskell, vim-plug, vim-plugin]
 category: vim
 ---
 
-第一步当初是安装vim，推荐使用比较新的8.1+版本。
+第一步当然是安装vim，用所在系统上的包管理器安装即可。
 
-```
-brew install vim
-```
+第二步是安装vim haskell插件，但在安装前需要先安装插件管理器。
 
-写haskell需要安装相应的插件，以得先搞定这个。
+这里使用[vim-plug](https://github.com/junegunn/vim-plug)来安装，按照主页给出的命令安装即可。
 
-vim8虽然有插件管理，但我没用过，这里使用vim-plug来安装。按照[vim-plug官方](https://github.com/junegunn/vim-plug)给出的命令即可安装成功。
-
-打开~/.vimrc，如果你按照vim-plug官方推荐的步骤安装好vim-plug后，.vimrc应该大约是这个样子。
+安装成功后，`.vimrc`应该大约是这个样子。
 
 ```vim
 call plug#begin('~/.vim/plugged')
 call plug#end()
 ```
 
-添加[stylish-haskell](https://github.com/jaspervdj/stylish-haskell)插件。
+此时就可以添加[stylish-haskell](https://github.com/jaspervdj/stylish-haskell)插件了。
 
 ```vim
 call plug#begin('~/.vim/plugged')
@@ -33,6 +29,12 @@ call plug#end()
 
 然后在vim中执行`:PlugInstall`进行安装。
 
-当然此时这个插件还不能用，因为它依赖命令行工具，具体内容可以去看官方文档。
+当然此时这个插件还不能用，因为它依赖命令行工具`stylish-haskell`。
 
-好了，到这里你应该掌握安装vim插件的基本方法了。
+使用[stack](https://docs.haskellstack.org/en/stable/README/)安装。
+
+```
+stack install stylish-haskell
+```
+
+好了，到这里你应该可以愉快地作用vim写Haskell了。
