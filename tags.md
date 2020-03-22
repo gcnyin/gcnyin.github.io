@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: page-without-tag-category
 title: Tags
 permalink: /tags/
 ---

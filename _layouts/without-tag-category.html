@@ -54,58 +54,6 @@
             <article class="markdown-body col-md-8">
                 {{ content }}
             </article>
-            <div class="col-md-4" style="margin-top: 25px;">
-                <h2>
-                    About
-                </h2>
-                <p>
-                    guchounongyin@gmail.com
-                </p>
-                <h2>Categories</h2>
-                <p>
-                    {% assign all_categories = site.posts | map: "category" | sort %}
-
-                    {% assign applied_categories_raw = "" %}
-
-                    {% for c in all_categories %}
-                    {% assign c_add_spliter = c | append:'|' %}
-                    {% unless applied_categories_raw contains c_add_spliter %}
-                    {% assign applied_categories_raw = applied_categories_raw | append:c_add_spliter %}
-                    {% endunless %}
-                    {% endfor %}
-
-                    {% assign applied_categories = applied_categories_raw | split:'|' %}
-
-                    {% for category in applied_categories %}
-                    <span class="badge badge-success"><i class="fa fa-hashtag"></i>&nbsp;{{ category }}</span>
-                    {% endfor %}
-                </p>
-                <h2>Tags</h2>
-                <p>
-                    {% assign rawtags = "" %}
-                    {% for post in site.posts %}
-                    {% assign ttags = post.tags | join:'|' | append:'|' %}
-                    {% assign rawtags = rawtags | append:ttags %}
-                    {% endfor %}
-                    {% assign rawtags = rawtags | split:'|' | sort %}
-
-                    {% assign tags = "" %}
-                    {% for tag in rawtags %}
-                    {% if tag != "" %}
-                    {% if tags == "" %}
-                    {% assign tags = tag | split:'|' %}
-                    {% endif %}
-                    {% unless tags contains tag %}
-                    {% assign tags = tags | join:'|' | append:'|' | append:tag | split:'|' %}
-                    {% endunless %}
-                    {% endif %}
-                    {% endfor %}
-
-                    {% for tag in tags %}
-                    <span class="badge badge-primary"><i class="fa fa-tag"></i>&nbsp;{{ tag }}</span>
-                    {% endfor %}
-                </p>
-            </div>
         </div>
     </div>
     <footer class="page-footer font-small text-muted">
