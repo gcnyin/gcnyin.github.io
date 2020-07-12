@@ -4,6 +4,8 @@ title: About
 permalink: /about/
 ---
 
+A developer, focus on server-side.
+
 Open-source project created by me
 
 ### Compiler

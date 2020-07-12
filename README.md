@@ -1,3 +1,3 @@
 # Personal Blog
 
-Based on Jekyll, Bootstrap, jQuery.
+A developer, focus on server-side.
