@@ -2,8 +2,6 @@
 layout: post
 title:  "Ingress极简示例"
 date:   2020-06-07 00:00:00 +0800
-tags: [k8s]
-category: k8s
 ---
 
 安装docker/ k8s/ helm。此处皆略过。

@@ -2,8 +2,6 @@
 layout: post
 title:  "旧技术的惯性"
 date:   2019-07-13 12:35:00 +0800
-tags: [groovy, kotlin, kotlin dsl]
-category: 随笔
 ---
 
 即使有某一技术很优秀，比现有的、最广泛的技术还要好，这仍然无法让这个技术流行开来。

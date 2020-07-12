@@ -2,8 +2,6 @@
 layout: post
 title:  "JVM if<cond>指令笔记"
 date:   2019-09-13 12:35:00 +0800
-tags: [jvm]
-category: 编译原理
 ---
 
 ```

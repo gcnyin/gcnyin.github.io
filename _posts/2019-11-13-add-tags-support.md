@@ -2,8 +2,6 @@
 layout: post
 title:  "给博客添加tags功能"
 date:   2019-11-13 18:00:00 +0800
-tags: [liuqid, jekyll]
-category: 博客
 ---
 
 [这篇文章](https://codinfox.github.io/dev/2015/03/06/use-tags-and-categories-in-your-jekyll-based-github-pages/)介绍了如何添加tags。

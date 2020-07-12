@@ -1,5 +1,5 @@
 ---
-layout: page-without-tag-category
+layout: page
 title: About
 permalink: /about/
 ---

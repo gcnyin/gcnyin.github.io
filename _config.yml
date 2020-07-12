@@ -1,18 +1,14 @@
 title: gcnyin's blog
 baseurl: ""
 url: "https://gcnyin.github.io"
-description: 如果无法看到评论，请科学上网
 github_username:  gcnyin
 
-# theme: minima
+theme: minima
 plugins:
   - jekyll-feed
 
 disqus:
   shortname: gcnyin
 
-google_analytics: UA-159166310-1
-
 minima:
   date_format: "%Y-%m-%d"
-  skin: sunrise

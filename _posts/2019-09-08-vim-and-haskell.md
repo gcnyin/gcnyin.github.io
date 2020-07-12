@@ -2,8 +2,6 @@
 layout: post
 title:  "配置vim来写Haskell"
 date:   2019-09-08 12:35:00 +0800
-tags: [vim, haskell, vim-plug, vim-plugin]
-category: vim
 ---
 
 第一步当然是安装vim，用所在系统上的包管理器安装即可。

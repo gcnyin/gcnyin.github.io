@@ -2,8 +2,6 @@
 layout: post
 title:  "mini-parser小轮子"
 date:   2019-11-06 18:00:00 +0800
-tags: [typescript, parser combinator, parser]
-category: 编译原理
 ---
 
 [代码链接](https://github.com/gcnyin/compiler/blob/master/mini-parser/index.ts)

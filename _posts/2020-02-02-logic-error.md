@@ -2,8 +2,6 @@
 layout: post
 title:  "一份简单的逻辑清单"
 date:   2020-02-02 00:00:00 +0800
-tags: [逻辑学]
-category: 随笔
 ---
 
 ## 一、前言
