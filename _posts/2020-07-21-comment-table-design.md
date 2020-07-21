@@ -79,6 +79,8 @@ id,content,parent_id,depth
 3,9715,2,3
 ```
 
+也有人指出这种设计难以分页，其实也不难。给comment再添加一个`depth`字段，分页时只处理`depth = 1`的item即可。
+
 ## 参考资料
 
 - https://www.postgresql.org/docs/current/queries-with.html
