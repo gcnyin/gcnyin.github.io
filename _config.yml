@@ -1,7 +1,7 @@
 title: gcnyin's blog
 baseurl: ""
 url: "https://gcnyin.github.io"
-github_username:  gcnyin
+github_username: gcnyin
 
 theme: minima
 plugins:
