@@ -1,0 +1,29 @@
+{
+  "name": "hexo-site",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "theme": "cat ./_config.theme.yml > ./themes/purer/_config.yml ",
+    "build": "yarn theme && hexo generate",
+    "clean": "hexo clean",
+    "deploy": "yarn theme && hexo deploy",
+    "server": "yarn theme && hexo server"
+  },
+  "hexo": {
+    "version": "5.0.0"
+  },
+  "dependencies": {
+    "@iktakahiro/markdown-it-katex": "^4.0.0",
+    "hexo": "^5.0.0",
+    "hexo-asset-image": "^1.0.0",
+    "hexo-generator-archive": "^1.0.0",
+    "hexo-generator-category": "^1.0.0",
+    "hexo-generator-index": "^1.0.0",
+    "hexo-generator-tag": "^1.0.0",
+    "hexo-renderer-ejs": "^1.0.0",
+    "hexo-renderer-markdown-it": "^4.1.0",
+    "hexo-renderer-marked": "^3.0.0",
+    "hexo-renderer-stylus": "^1.1.0",
+    "hexo-server": "^1.0.0"
+  }
+}
