@@ -130,7 +130,7 @@ widgets:
   - tag
   - tagcloud
   - archive
-  - recent_posts
+  # - recent_posts
 
 #widget behaivor
 show_count: true
