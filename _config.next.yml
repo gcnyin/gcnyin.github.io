@@ -231,7 +231,7 @@ excerpt_description: false
 
 # Read more button
 # If true, the read more button will be displayed in excerpt section.
-read_more_btn: true
+read_more_btn: false
 
 # Post meta display settings
 post_meta:
@@ -357,9 +357,9 @@ codeblock:
     dark: prism-dark
   # Add copy button on codeblock
   copy_button:
-    enable: false
+    enable: true
     # Available values: default | flat | mac
-    style:
+    style: default
 
 back2top:
   enable: true
@@ -875,12 +875,12 @@ vendors:
   fontawesome:
 
   # Prism
-  # prism: //unpkg.com/prismjs@1/components/prism-core.min.js
-  # prism_autoloader: //unpkg.com/prismjs@1/plugins/autoloader/prism-autoloader.min.js
-  # prism_line_numbers: //unpkg.com/prismjs@1/plugins/line-numbers/prism-line-numbers.min.js
-  prism:
-  prism_autoloader:
-  prism_line_numbers:
+  prism: //unpkg.com/prismjs@1/components/prism-core.min.js
+  prism_autoloader: //unpkg.com/prismjs@1/plugins/autoloader/prism-autoloader.min.js
+  prism_line_numbers: //unpkg.com/prismjs@1/plugins/line-numbers/prism-line-numbers.min.js
+  # prism:
+  # prism_autoloader:
+  # prism_line_numbers:
 
   # MathJax
   # mathjax: //unpkg.com/mathjax@3/es5/tex-mml-chtml.js
