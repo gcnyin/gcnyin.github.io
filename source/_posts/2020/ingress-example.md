@@ -6,6 +6,16 @@ categories:
 - k8s
 ---
 
+Ingress是k8s中一个相当重要的API，它可以将k8s内部的service通过HTTP或HTTPS接口暴露到外部。
+
+```
+  internet
+      |
+ [ Ingress ]
+ --|-----|--
+ [ Services ]
+```
+
 安装docker/ k8s/ helm。此处皆略过。
 
 <!-- more -->
