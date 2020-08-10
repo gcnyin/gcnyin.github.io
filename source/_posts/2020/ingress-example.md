@@ -16,9 +16,9 @@ Ingress是k8s中一个相当重要的API，它可以将k8s内部的service通过
  [ Services ]
 ```
 
-安装docker/ k8s/ helm。此处皆略过。
-
 <!-- more -->
+
+安装docker/ k8s/ helm。此处皆略过。
 
 随便启动一个Service：
 

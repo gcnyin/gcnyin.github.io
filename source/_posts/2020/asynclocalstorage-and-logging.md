@@ -6,9 +6,11 @@ categories:
 - nodejs
 ---
 
-最近在思考node.js如何做服务间与服务内部的日志追踪，一个很简单的实现就是在HTTP request header里添加一个字段x-trace-id来标识唯一性，打印日志时添加x-trace-id的值。但如何保存这个状态呢？我看到的一些实现里，会将traceId作为参数传递到应用的各个函数/方法里，调用`logger.info(traceId, "XXX")`来实现打印traceId的功能。这样的写法并不优雅，但node.js又不像其他语言框架，比如Spring MVC，可以用过ThreadLocal来保存这个状态，那如何保存这个状态呢？其实node.js已经有了这样一个API：`AsyncLocalStorage`。
+最近在思考node.js如何做服务间与服务内部的日志追踪，一个很简单的实现就是在HTTP request header里添加一个字段x-trace-id来标识唯一性，打印日志时添加x-trace-id的值。但如何保存这个状态呢？
 
 <!-- more -->
+
+我看到的一些框架和应用会将traceId作为参数传递到应用的各个函数/方法里，调用`logger.info(traceId, "XXX")`来实现打印traceId的功能。这样的写法并不优雅，但node.js又不像其他语言框架，比如Spring MVC，可以用过ThreadLocal来保存这个状态，那如何保存这个状态呢？其实node.js已经有了这样一个API：`AsyncLocalStorage`。
 
 `AsyncLocalStorage`属于async_hooks模块，node.js v14引入，后被反向移植到v12上。下面用一个express应用来说明它的用法。
 
