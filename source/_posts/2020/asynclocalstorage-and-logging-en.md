@@ -6,8 +6,6 @@ categories:
   - nodejs
 ---
 
-最近在思考 node.js 如何做服务间与服务内部的日志追踪，一个很简单的实现就是在 HTTP request header 里添加一个字段 x-trace-id 来标识唯一性，打印日志时添加 x-trace-id 的值。但如何保存这个状态呢？
-
 Recently, I am thinking about how node.js does log tracking between services and services. A very simple implementation is to add a field `traceId` in the HTTP request header to identify uniqueness, and add `traceId` when printing logs. But how to save this state?
 
 <!-- more -->
