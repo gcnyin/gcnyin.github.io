@@ -10,7 +10,7 @@ Recently, I am thinking about how node.js does log tracking between services and
 
 <!-- more -->
 
-Some frameworks and applications I have seen pass `traceId` as a parameter to various functions/methods of the application, and call `logger.info(traceId, "XXX")` to realize the function of printing traceId. This way of writing is not elegant, but unlike other language frameworks, such as Spring MVC, node.js can use `ThreadLocal` to save this state. How to save this state? In fact, node.js already has such an API: `AsyncLocalStorage`.
+Some frameworks and applications I have seen pass `traceId` as a parameter to various functions/methods of the application, and call `logger.info(traceId, "XXX")` to realize the function of printing traceId. This way of writing is not elegant, but unlike other language frameworks, such as Spring MVC, node.js doesn't use `ThreadLocal` API to save this state. How to save this state? In fact, node.js already has such an API: `AsyncLocalStorage`.
 
 `AsyncLocalStorage` belongs to the async_hooks module, which was introduced in node.js v14 and then backported to v12. Let's use an express application to illustrate its usage.
 
