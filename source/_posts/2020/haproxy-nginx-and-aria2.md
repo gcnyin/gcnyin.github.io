@@ -8,7 +8,7 @@ categories:
 
 最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。架构大致如下。
 
-![honghongjie](/images/wangpan-arch.jpg)
+![wangpan-arch](/images/wangpan-arch.jpg)
 
 <!-- more -->
 
@@ -187,4 +187,8 @@ backend aria2c6800
     server aria2c6800 127.0.0.1:6800
 ```
 
-通过acl创建hostname的判断条件，如果符合给定的条件则代理到对应的后端服务上。
+通过acl创建hostname的判断条件，如果符合给定的条件则代理到对应的后端服务上。以下是aria2 frontend与文件下载页面的截图。
+
+![aria2ng](/images/aria2ng.jpg)
+
+![nginx-autoindex](/images/nginx-autoindex.jpg)
