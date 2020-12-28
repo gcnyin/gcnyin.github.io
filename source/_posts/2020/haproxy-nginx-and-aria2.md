@@ -189,6 +189,6 @@ backend aria2c6800
 
 通过acl创建hostname的判断条件，如果符合给定的条件则代理到对应的后端服务上。以下是aria2 frontend与文件下载页面的截图。
 
-![aria2ng](/images/aria2ng.jpg)
+![aria2ng](/images/aria2ng.png)
 
-![nginx-autoindex](/images/nginx-autoindex.jpg)
+![nginx-autoindex](/images/nginx-autoindex.png)
