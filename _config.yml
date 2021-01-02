@@ -3,12 +3,12 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: Gcnyin's Blog
-subtitle: ''
-description: ''
+title: 菠萝头的小窝
+subtitle: '记录所思所得'
+description: '从事后端与数据开发'
 keywords:
-author: gcnyin
-language: en
+author: 菠萝头
+language: zh-CN
 timezone: ''
 
 # URL
