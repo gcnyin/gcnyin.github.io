@@ -6,7 +6,7 @@ categories:
 - network
 ---
 
-[vproxy](https://github.com/wkgcass/vproxy)是一款由Java编写的网络应用，零依赖、高性能且功能丰富。下面就让我们一起来探索下vproxy的奥秘。本文分析的是`dev`分支截止到commit`9388077ac3d7d5565366e0f9a4f67460e0dc5bd8`的代码。
+[vproxy](https://github.com/wkgcass/vproxy)是一款由Java编写的网络应用，零依赖、高性能且功能丰富。本文分析的是`dev`分支。本文在撰写时得到了vproxy作者的帮助，在此一并表示感谢。
 
 > 注意！为了更好的阅读体验，请在电脑上阅读。
 
@@ -15,6 +15,10 @@ categories:
 vproxy一共有6个模块，`base`, `core`, `extended`, `lib`, `test`, `app`。抛开用于测试的test模块，依赖关系如下图。base模块是最底层的，我们从这里开始。
 
 ![vproxy-modules](/images/vproxy-modules.png)
+
+> 这里一并附上vproxy作者给出的架构图供大家参考。
+
+![vproxy-architecture](/images/vproxy-architecture.jpg)
 
 ## Base
 
@@ -73,19 +77,15 @@ public interface FD extends Channel {
 │   ├── socks
 │   └── util
 └── vswitch
-    ├── ArpTable.java
-    ├── IPMac.java
-    ├── MacTable.java
-    ├── ProxyHolder.java
-    ├── RouteTable.java
-    ├── Switch.java
-    ├── SyntheticIpHolder.java
-    ├── Table.java
-    ├── iface
-    ├── stack
-    └── util
-
-11 directories, 10 files
+    └── 略
 ```
+
+## Lib
+
+`lib`里大多是一些应用层的东西，比如`HTTP client`, `HTTP server`, `Stream server`(这个其实就是`Network server`，处理裸socket), 还有一些HTTP Route的东西。
+
+## Extended
+
+`extended`里有一个非常关键的模块——`websocks`。这是一个作者自定义的网络应用层协议，其实就是将`socks`协议与`http`协议整合在一起，根据连接前几个字节判断属于哪个。懂行的朋友可能知道这是用来干什么的。
 
 *未完待续*
