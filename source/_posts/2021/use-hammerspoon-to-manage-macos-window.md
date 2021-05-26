@@ -8,7 +8,7 @@ categories:
 - macos
 ---
 
-macOS没有内置窗口管理功能，需要安装第三方软件来实现。常用的免费软件有Spectacle和ShiftIt，这已不再维护。今天将macOS升级到11.4后，发现ShiftIt彻底不能使用了。搜寻后在[ShiftIt wiki](https://github.com/fikovnik/ShiftIt/wiki/The-Hammerspoon-Alternative)里找到了替代品[hammerspoon](http://www.hammerspoon.org/)。
+macOS没有内置窗口管理功能，需要安装第三方软件来实现。常用的免费软件有Spectacle和ShiftIt，这已不再维护。今天将macOS升级到11.3后，发现ShiftIt彻底不能使用了。搜寻后在[ShiftIt wiki](https://github.com/fikovnik/ShiftIt/wiki/The-Hammerspoon-Alternative)里找到了替代品[hammerspoon](http://www.hammerspoon.org/)。
 
 <!-- more -->
 
