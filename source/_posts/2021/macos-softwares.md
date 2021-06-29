@@ -7,7 +7,7 @@ categories:
 - macos
 ---
 
-工作后一直用macbook-pro(15款和17款)，已经完全习惯了在macOS下开发。除了公司发的，自己也有一台mbp，所以一些常用的软件两台电脑都要安装一遍。有时忘了装哪个，需要用时就很麻烦。所以将我常用的macOS软件记录在此。
+工作后一直用MacBook Pro(15款和17款)，除了公司发的，自己也有一台，现在已经完全习惯了在macOS下开发。macOS下的各种工具基本都把玩了一遍，有一些非常顺手，格外喜欢，这里分享给大家。
 
 <!-- more -->
 
@@ -25,9 +25,10 @@ categories:
 
 # 编辑器
 
-已经2021年了，编辑器首选vscode。虽然Sublime Text出了3.x，但用着不如vscode顺手。
+已经2021年了，编辑器首选vscode。虽然Sublime Text出了3.x，但用着不如vscode顺手。命令行里一般用vim。学过emacs，但不是很熟练。
 
 - Visual studio code
+- Vim
 
 # IDE
 
@@ -52,19 +53,27 @@ categories:
 我这几年积累了很多命令行工具，每一个都无可替代。
 
 - ohmyzsh
-- ohmyzsh theme: powerlevel10k
-- ohmyzsh plugins: zsh-autosuggestions, zsh-syntax-highlighting, fzf, git-open, docker
-- fzf - 快速查找文件、进程
-- nvm - 管理nodejs版本
-- jenv - 管理jdk版本
-- z - 智能目录跳转
-- tig - git客户端
-- tree - 目录树
-- ack - grep替代品
-- mosh - mosh客户端
-- ncdu - 查看磁盘使用情况
-- htop - 查看进程
-- diff-so-fancy - 很好的文本比对工具
+- ohmyzsh theme
+    - powerlevel10k **强烈推荐**，功能很完备一个主题
+- ohmyzsh plugins
+    - zsh-autosuggestions 根据历史记录自动推荐命令
+    - zsh-syntax-highlighting 命令行语法高亮，再也不用担心用错命令
+    - fzf
+    - git-open
+    - docker
+- fzf: 快速查找文件、进程
+- tmux: 终端复用工具，强烈推荐，搭配这个[配置](https://github.com/gpakosz/.tmux)
+- tldr: 总结了各个命令的常见用法
+- nvm: 管理nodejs版本
+- jenv: 管理jdk版本
+- z: 智能目录跳转
+- tig: git客户端
+- tree: 目录树
+- ack: grep替代品
+- mosh: mosh客户端
+- ncdu: 查看磁盘使用情况
+- htop: 查看进程
+- diff-so-fancy: 很好的文本比对工具
 
 # 字体
 
