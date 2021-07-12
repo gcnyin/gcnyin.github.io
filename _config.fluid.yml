@@ -289,7 +289,7 @@ navbar:
   # 导航栏毛玻璃特效，实验性功能，可能会造成页面滚动掉帧和抖动，部分浏览器不支持会自动不生效
   # Navigation bar frosted glass special animation. It is an experimental feature
   ground_glass:
-    enable: false
+    enable: true
 
     # 模糊像素，只能为数字，数字越大模糊度越高
     # Number of blurred pixel. the larger the number, the higher the blur
@@ -510,7 +510,7 @@ post:
     # 字数统计
     # Word count
     wordcount:
-      enable: true
+      enable: false
       # 显示的文本，{}是数字的占位符（必须包含)，下同
       # Displayed text, {} is a placeholder for numbers (must be included), the same below
       format: "{} 字"
@@ -518,7 +518,7 @@ post:
     # 估计阅读全文需要的时长
     # Estimate the time required to read the full text
     min2read:
-      enable: true
+      enable: false
       format: "{} 分钟"
       # 每分钟阅读多少字，如果是技术文章，建议降低
       # Words read per minute
@@ -562,7 +562,7 @@ post:
   # Copyright, will be displayed at the end of each post
   copyright:
     enable: true
-    content: '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！'
+    content: '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！https://blog.boluotou.tech'
 
   # 文章底部上一篇下一篇功能
   # Link to previous/next post
@@ -622,7 +622,7 @@ post:
   # 评论插件
   # Comment plugin
   comments:
-    enable: false
+    enable: true
     # 指定的插件，需要同时设置对应插件的必要参数
     # The specified plugin needs to set the necessary parameters at the same time
     # Options: utterances | disqus | gitalk | valine | waline | changyan | livere | remark42 | twikoo | cusdis
@@ -654,12 +654,12 @@ utterances:
 # Based on third-party service
 # See: https://disqus.com
 disqus:
-  shortname:
+  shortname: gcnyin
   # 以下为 Disqusjs 支持, 国内用户如果想使用 Disqus 建议配合使用
   # The following are Disqusjs configurations, please ignore if DisqusJS is not required
   # See: https://github.com/SukkaW/DisqusJS
-  disqusjs: false
-  apikey:
+  disqusjs: true
+  apikey: axEXO6tIip7EqeO3wdDoglRjBQgCwgK56jmZvsla1mBt7x9JHA2i5StHnonPvGLp
 
 # Gitalk
 # 基于 GitHub Issues
