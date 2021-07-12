@@ -4,6 +4,9 @@ title: "mini-parser小轮子"
 date: 2019-11-06 18:00:00
 categories:
 - compiler
+tags:
+- typescript
+- parser
 ---
 
 [代码链接](https://github.com/gcnyin/compiler/blob/master/mini-parser/index.ts)

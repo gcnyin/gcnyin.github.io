@@ -4,6 +4,11 @@ title: "slisp：一门简单的JVM上的Lisp方言"
 date: 2019-01-01 00:00:00
 categories:
 - compiler
+tags:
+- jvm
+- antlr
+- asm
+- lisp
 ---
 
 之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶段性总结。

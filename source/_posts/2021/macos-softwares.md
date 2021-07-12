@@ -1,10 +1,11 @@
 ---
 title: 我的macOS软件清单
 date: 2021-06-29 20:31:06
+categories:
+- macos
 tags:
-- macos
-categories: 
-- macos
+- 工具
+- 命令行
 ---
 
 工作后一直用MacBook Pro(15款和17款)，除了公司发的，自己也有一台，现在已经完全习惯了在macOS下开发。macOS下的各种工具基本都把玩了一遍，有一些非常顺手，格外喜欢，这里分享给大家。

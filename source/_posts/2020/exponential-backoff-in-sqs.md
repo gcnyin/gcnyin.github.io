@@ -2,7 +2,9 @@
 title: "AWS SQS如何实现指数退避"
 date: 2020-08-08 16:35:20
 categories:
-  - aws
+- aws
+tags:
+- mq
 ---
 
 # 什么是 SQS？
