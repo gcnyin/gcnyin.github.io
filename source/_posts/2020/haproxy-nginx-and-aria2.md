@@ -7,7 +7,6 @@ categories:
 tags:
 - nginx
 - haproxy
-- aria2c
 ---
 
 最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。架构大致如下。

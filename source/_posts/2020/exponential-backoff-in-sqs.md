@@ -4,7 +4,7 @@ date: 2020-08-08 16:35:20
 categories:
 - aws
 tags:
-- mq
+- nodejs
 ---
 
 # 什么是 SQS？

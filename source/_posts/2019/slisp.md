@@ -6,8 +6,7 @@ categories:
 - compiler
 tags:
 - jvm
-- antlr
-- asm
+- java
 - lisp
 ---
 
