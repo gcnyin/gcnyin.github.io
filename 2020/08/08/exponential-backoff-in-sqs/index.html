@@ -1,0 +1,479 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/images/favicon.ico">
+  <link rel="icon" href="/images/favicon.ico">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="什么是 SQS？SQS 全称 Simple queue service，是 AWS 推出一款消息队列服务。按照 AWS 官方文档的说法，SQS 居有高吞吐、高可用的特性。从我个人的开发体验来看，SQS 是一款相当易用并且功能强大的消息队列服务，满足了生产使用的大部分需求。">
+  <meta name="author" content="菠萝头">
+  <meta name="keywords" content="">
+  
+  <title>AWS SQS如何实现指数退避 - 菠萝头的小窝</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.7.2/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"blog.boluotou.tech","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>箱子的小窝</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/default.png') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="AWS SQS如何实现指数退避">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-08-08 16:35" pubdate>
+        2020年8月8日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">AWS SQS如何实现指数退避</h1>
+            
+            <div class="markdown-body">
+              <h1 id="什么是-SQS？"><a href="#什么是-SQS？" class="headerlink" title="什么是 SQS？"></a>什么是 SQS？</h1><p>SQS 全称 Simple queue service，是 AWS 推出一款消息队列服务。按照 AWS 官方文档的说法，SQS 居有高吞吐、高可用的特性。从我个人的开发体验来看，SQS 是一款相当易用并且功能强大的消息队列服务，满足了生产使用的大部分需求。</p>
+<span id="more"></span>
+
+<blockquote>
+<p>Amazon Simple Queue Service (SQS) 是一种完全托管的消息队列服务，可让您分离和扩展微服务、分布式系统和无服务器应用程序。SQS 消除了与管理和运营消息型中间件相关的复杂性和开销，并使开发人员能够专注于重要工作。借助 SQS，您可以在软件组件之间发送、存储和接收任何规模的消息，而不会丢失消息，并且无需其他服务即可保持可用。使用 AWS 控制台、命令行界面或您选择的 SDK 和三个简单的命令，在几分钟内即可开始使用 SQS。</p>
+</blockquote>
+<h1 id="什么是指数退避？"><a href="#什么是指数退避？" class="headerlink" title="什么是指数退避？"></a>什么是指数退避？</h1><p>不过有一项功能 SQS 并没有原生实现，那就是“指数退避”。指数退避是指在消息处理失败时，消息队列会发送消息，直到消息处理成功或者超时。而针对每条消息，每次重试的间隔时间是指数级上升的，比如第一次重试 3 秒，第二次重试 9 秒，第三次重试 27 秒等等，以此类推。这个功能在系统设计中属于常见功能。</p>
+<p>虽然 SQS 没有原生实现，但这我们可以利用 SQS 现有 API 来实现。本文关注使用的，就是 SQS 中 VisibilityTimeout 和 ApproximateReceiveCount 属性以<code>changeMessageVisibility</code>API。</p>
+<h1 id="什么是-VisibilityTimeout"><a href="#什么是-VisibilityTimeout" class="headerlink" title="什么是 VisibilityTimeout"></a>什么是 VisibilityTimeout</h1><p>VisibilityTimeout 这个概念源于 SQS 中的一个巧妙设计。</p>
+<p>当一个消费者接收到 SQS 中的消息后，SQS 并不会立刻将这条消息从队列中删除，因为 SQS 并不知道消费者是否成功接受并处理了消息。如果想要删除这条消息，消费者必须在处理完消息后，手动调用 SQS 的<code>deleteMessage</code>API 去删除，这样 SQS 才会认为这条消费已经被成功消费，可以从队列中删除了。</p>
+<p>可问题来了，如果消费者 A 接受到消息后，消息还在队列中，消费者 B 能不能同时接受并处理这条消息呢？如果经常有多个消费者同时处理同一个消息，系统不是就乱套了吗？</p>
+<p>基于这种考虑，SQS 对每条消息设置了一个 VisibilityTimeout 的属性，这个属性的值代表了时间长度。如果消费者 A 获得了消息，那么这条消息在 VisibilityTimeout 这么长的时间内是不会被其他消费者读取的，只有超过了这个时间长度，其他消费者才可以读取。也正是基于这个设计，大家在配置 VisibilityTimeout 时长时，要比处理这条消息所花的时间稍长一点。</p>
+<p><img src="/images/sqs-visibility-timeout-diagram.png" srcset="/img/loading.gif" lazyload></p>
+<p>有了这个属性，还有操作它的<code>changeMessageVisibility</code>API，我们就可以构思出指数退避的大致方案了。每当消息处理失败时，就重新设置消息的 VisibilityTimeout，并且值是上一次的 N 倍（下面全部都设定为<code>2</code>）。伪代码如下：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs js"><span class="hljs-keyword">const</span> message = receiveMessage();<br><span class="hljs-keyword">try</span> &#123;<br>  process(message);<br>&#125; <span class="hljs-keyword">catch</span> (e) &#123;<br>  <span class="hljs-keyword">const</span> retriesCount = getRetriesCount(message);<br>  changeMessageVisibility(message, <span class="hljs-number">2</span> ^ retriesCount);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h1 id="什么是-ApproximateReceiveCount？"><a href="#什么是-ApproximateReceiveCount？" class="headerlink" title="什么是 ApproximateReceiveCount？"></a>什么是 ApproximateReceiveCount？</h1><p>上面伪代码需要从消息中获取重试次数，如何获得呢？我们可以在从 SQS 接受消息时，指定额外的<code>Attributes</code>字段告知 SQS 返回相关属性。</p>
+<p>请求</p>
+<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs awk">https:<span class="hljs-regexp">//</span>sqs.us-east-<span class="hljs-number">2</span>.amazonaws.com<span class="hljs-regexp">/xxxxxxxxxxx/</span>MyQueue/<br>?Action=ReceiveMessage<br>&amp;AttributeName=All<br></code></pre></td></tr></table></figure>
+
+<p>响应</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">ReceiveMessageResponse</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">ReceiveMessageResult</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">Message</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">MessageId</span>&gt;</span>5fea7756-0ea4-451a-a703-a558b933e274<span class="hljs-tag">&lt;/<span class="hljs-name">MessageId</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">ReceiptHandle</span>&gt;</span><br>        MbZj6wDWli+JvwwJaBV+3dcjk2YW2vA3+STFFljTM8tJJg6HRG6PYSasuWXPJB+Cw<br>        Lj1FjgXUv1uSj1gUPAWV66FU/WeR4mq2OKpEGYWbnLmpRCJVAyeMjeU5ZBdtcQ+QE<br>        auMZc8ZRv37sIW2iJKq3M9MFx1YvV11A2x/KSbkJ0=<br>      <span class="hljs-tag">&lt;/<span class="hljs-name">ReceiptHandle</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">MD5OfBody</span>&gt;</span>fafb00f5732ab283681e124bf8747ed1<span class="hljs-tag">&lt;/<span class="hljs-name">MD5OfBody</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">Body</span>&gt;</span>This is a test message<span class="hljs-tag">&lt;/<span class="hljs-name">Body</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">Attribute</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">Name</span>&gt;</span>SenderId<span class="hljs-tag">&lt;/<span class="hljs-name">Name</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">Value</span>&gt;</span>195004372649<span class="hljs-tag">&lt;/<span class="hljs-name">Value</span>&gt;</span><br>      <span class="hljs-tag">&lt;/<span class="hljs-name">Attribute</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">Attribute</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">Name</span>&gt;</span>SentTimestamp<span class="hljs-tag">&lt;/<span class="hljs-name">Name</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">Value</span>&gt;</span>1238099229000<span class="hljs-tag">&lt;/<span class="hljs-name">Value</span>&gt;</span><br>      <span class="hljs-tag">&lt;/<span class="hljs-name">Attribute</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">Attribute</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">Name</span>&gt;</span>ApproximateReceiveCount<span class="hljs-tag">&lt;/<span class="hljs-name">Name</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">Value</span>&gt;</span>5<span class="hljs-tag">&lt;/<span class="hljs-name">Value</span>&gt;</span><br>      <span class="hljs-tag">&lt;/<span class="hljs-name">Attribute</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">Attribute</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">Name</span>&gt;</span>ApproximateFirstReceiveTimestamp<span class="hljs-tag">&lt;/<span class="hljs-name">Name</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">Value</span>&gt;</span>1250700979248<span class="hljs-tag">&lt;/<span class="hljs-name">Value</span>&gt;</span><br>      <span class="hljs-tag">&lt;/<span class="hljs-name">Attribute</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">Message</span>&gt;</span><br>  <span class="hljs-tag">&lt;/<span class="hljs-name">ReceiveMessageResult</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">ResponseMetadata</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">RequestId</span>&gt;</span>b6633655-283d-45b4-aee4-4e84e0ae6afa<span class="hljs-tag">&lt;/<span class="hljs-name">RequestId</span>&gt;</span><br>  <span class="hljs-tag">&lt;/<span class="hljs-name">ResponseMetadata</span>&gt;</span><br><span class="hljs-tag">&lt;/<span class="hljs-name">ReceiveMessageResponse</span>&gt;</span><br></code></pre></td></tr></table></figure>
+
+<p>返回的响应即含有<code>ApproximateReceiveCount</code>，它就是伪代码中的<code>retriesCount</code>。</p>
+<h1 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h1><p>本文基于 SQS 已有的 API，构建出一种简单的指数退避方案。除了已提到的内容，还要注意系统的幂等性，避免多次处理消息失败产生额外的影响。</p>
+<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><ul>
+<li><a target="_blank" rel="noopener" href="https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html">https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ReceiveMessage.html">https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ReceiveMessage.html</a></li>
+</ul>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/aws/">aws</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/nodejs/">nodejs</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！https://blog.boluotou.tech
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2020/12/17/minimalism-life-style/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">我所理解的极简生活</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2020/06/25/asynclocalstorage-and-logging/">
+                        <span class="hidden-mobile">AsyncLocalStorage与日志追踪</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments" lazyload>
+                
+                  
+                
+                
+  <div class="disqus" style="width:100%">
+    <div id="disqus_thread"></div>
+    
+      <script>
+        Fluid.utils.loadComments('#disqus_thread', function() {
+          Fluid.utils.createCssLink('https://cdn.jsdelivr.net/npm/disqusjs@1.3.0/dist/disqusjs.css');
+          Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/disqusjs@1.3.0/dist/disqus.js', function() {
+            new DisqusJS({
+              shortname: 'gcnyin',
+              apikey: 'axEXO6tIip7EqeO3wdDoglRjBQgCwgK56jmZvsla1mBt7x9JHA2i5StHnonPvGLp'
+            });
+          });
+        });
+      </script>
+    
+    <noscript>Please enable JavaScript to view the comments</noscript>
+  </div>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a>© 2021 Made by Boluotou with ❤️</a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.3/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.1/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js" ></script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>

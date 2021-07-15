@@ -1,0 +1,472 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/images/favicon.ico">
+  <link rel="icon" href="/images/favicon.ico">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。架构大致如下。
+">
+  <meta name="author" content="菠萝头">
+  <meta name="keywords" content="">
+  
+  <title>使用haproxy，nginx与aria2搭建下载服务 - 菠萝头的小窝</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.7.2/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"blog.boluotou.tech","root":"/","version":"1.8.11","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>箱子的小窝</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/default.png') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="使用haproxy，nginx与aria2搭建下载服务">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2020-12-26 00:00" pubdate>
+        2020年12月26日 凌晨
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">使用haproxy，nginx与aria2搭建下载服务</h1>
+            
+            <div class="markdown-body">
+              <p>最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。架构大致如下。</p>
+<p><img src="/images/wangpan-arch.jpg" srcset="/img/loading.gif" lazyload alt="wangpan-arch"></p>
+<span id="more"></span>
+
+<p>Aria2配置如下，大家基本可以直接照抄，只需要修改下<code>rpc-secret</code>，用<code>aria2c --conf-path=/root/aria2/aria2.conf -D</code>命令启动即可。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br></pre></td><td class="code"><pre><code class="hljs conf"># touch /data/aria2.session<br># vim /etc/aria2/aria2.conf<br>## &#x27;#&#x27;开头为注释内容, 选项都有相应的注释说明, 根据需要修改 ##<br>## 被注释的选项填写的是默认值, 建议在需要修改时再取消注释  ##<br><br>## 文件保存相关 ##<br><br># 文件的保存路径(可使用绝对路径或相对路径), 默认: 当前启动位置<br>dir=/root/Downloads<br><br># 启用磁盘缓存, 0为禁用缓存, 需1.16以上版本, 默认:16M<br>disk-cache=32M<br># 文件预分配方式, 能有效降低磁盘碎片, 默认:prealloc<br># 预分配所需时间: none &lt; falloc ? trunc &lt; prealloc<br># falloc和trunc则需要文件系统和内核支持<br># NTFS建议使用falloc, EXT3/4建议trunc, MAC 下需要注释此项<br>file-allocation=trunc<br># 断点续传<br>continue=true<br><br>## 下载连接相关 ##<br><br># 最大同时下载任务数, 运行时可修改, 默认:5<br>max-concurrent-downloads=10<br># 同一服务器连接数, 添加时可指定, 默认:1<br>max-connection-per-server=10<br># 最小文件分片大小, 添加时可指定, 取值范围1M -1024M, 默认:20M<br># 假定size=10M, 文件为20MiB 则使用两个来源下载; 文件为15MiB 则使用一个来源下载<br>min-split-size=10M<br># 单个任务最大线程数, 添加时可指定, 默认:5<br>split=5<br># 整体下载速度限制, 运行时可修改, 默认:0<br>#max-overall-download-limit=0<br># 单个任务下载速度限制, 默认:0<br>#max-download-limit=0<br># 整体上传速度限制, 运行时可修改, 默认:0<br>#max-overall-upload-limit=0<br># 单个任务上传速度限制, 默认:0<br>#max-upload-limit=0<br># 禁用IPv6, 默认:false<br>disable-ipv6=true<br><br>## 进度保存相关 ##<br><br># 从会话文件中读取下载任务<br>input-file=/root/aria2/aria2.session<br># 在Aria2退出时保存`错误/未完成`的下载任务到会话文件<br>save-session=/root/aria2/aria2.session<br># 定时保存会话, 0为退出时才保存, 需1.16.1以上版本, 默认:0<br>save-session-interval=60<br><br>## RPC相关设置 ##<br><br>pause=false<br>rpc-allow-origin-all=true<br>rpc-listen-all=true<br>rpc-save-upload-metadata=true<br>rpc-secure=false<br><br># 启用RPC, 默认:false<br>enable-rpc=true<br># 允许所有来源, 默认:false<br>#rpc-allow-origin-all=true<br># 允许非外部访问, 默认:false<br>#rpc-listen-all=true<br># 事件轮询方式, 取值:[epoll, kqueue, port, poll, select], 不同系统默认值不同<br>event-poll=epoll<br># RPC监听端口, 端口被占用时可以修改, 默认:6800<br>rpc-listen-port=6800<br># 设置的RPC授权令牌, v1.18.4新增功能, 取代 --rpc-user 和 --rpc-passwd 选项<br>rpc-secret=XXXXXX<br># 设置的RPC访问用户名, 此选项新版已废弃, 建议改用 --rpc-secret 选项<br>#rpc-user=&lt;USER&gt;<br># 设置的RPC访问密码, 此选项新版已废弃, 建议改用 --rpc-secret 选项<br>#rpc-passwd=&lt;PASSWD&gt;<br><br>## BT/PT下载相关 ##<br><br># 当下载的是一个种子(以.torrent结尾)时, 自动开始BT任务, 默认:true<br>#follow-torrent=true<br># BT监听端口, 当端口被屏蔽时使用, 默认:6881-6999<br>listen-port=51413<br># 单个种子最大连接数, 默认:55<br>#bt-max-peers=55<br># 打开DHT功能, PT需要禁用, 默认:true<br>enable-dht=true<br># 打开IPv6 DHT功能, PT需要禁用<br>#enable-dht6=false<br># DHT网络监听端口, 默认:6881-6999<br>#dht-listen-port=6881-6999<br># 本地节点查找, PT需要禁用, 默认:false<br>bt-enable-lpd=true<br># 种子交换, PT需要禁用, 默认:true<br>enable-peer-exchange=false<br># 每个种子限速, 对少种的PT很有用, 默认:50K<br>#bt-request-peer-speed-limit=50K<br># 客户端伪装, PT需要<br>#peer-id-prefix=-TR2770-<br>user-agent=Transmission/2.92<br>#user-agent=netdisk;4.4.0.6;PC;PC-Windows;6.2.9200;WindowsBaiduYunGuanJia<br># 当种子的分享率达到这个数时, 自动停止做种, 0为一直做种, 默认:1.0<br><br>seed-ratio=1.0<br>#作种时间大于30分钟，则停止作种<br>seed-time=30<br># 强制保存会话, 话即使任务已经完成, 默认:false<br># 较新的版本开启后会在任务完成后依然保留.aria2文件<br>#force-save=false<br># BT校验相关, 默认:true<br>#bt-hash-check-seed=true<br># 继续之前的BT任务时, 无需再次校验, 默认:false<br>bt-seed-unverified=true<br># 保存磁力链接元数据为种子文件(.torrent文件), 默认:false<br>bt-save-metadata=true<br>#下载完成后删除.ara2的同名文件<br>on-download-complete=/root/aria2/delete_aria2<br></code></pre></td></tr></table></figure>
+
+<p>Aria2后端搭建好后，还需要一个前端页面去操作，这里选用<a target="_blank" rel="noopener" href="https://github.com/mayswind/AriaNg">AriaNg</a>，下载最新版本，置于<code>/root/Aria2Ng</code>目录下，同时配置nginx来host这个页面。Nginx配置如下。注意，使用了8081端口，之后还会提到它。</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs nginx"><span class="hljs-section">server</span> &#123;<br>    <span class="hljs-attribute">listen</span> <span class="hljs-number">8081</span>;<br><br>    <span class="hljs-attribute">location</span> / &#123;<br>        <span class="hljs-attribute">autoindex</span> <span class="hljs-literal">on</span>;<br>        <span class="hljs-attribute">root</span> /root/AriaNg;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>接着搭建静态文件服务器，在之前的aria2配置里，默认下载目录为<code>/root/Downloads</code>，我们只需要建一个文件下载服务器，绑定到这个目录即可。好在nginx提供了开箱即用的文件下载服务器。配置如下，端口为8080。</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs nginx"><span class="hljs-section">server</span> &#123;<br>    <span class="hljs-attribute">listen</span> <span class="hljs-number">8080</span>;<br><br>    <span class="hljs-attribute">location</span> / &#123;<br>        <span class="hljs-attribute">autoindex</span> <span class="hljs-literal">on</span>;<br>        <span class="hljs-attribute">root</span> /root/Downloads;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这三个服务全都在同一台机器上，使用端口访问很不方便，所以加一个代理，根据hostname的不同代理到不同服务上。这里我用的是haproxy，haproxy是一一款老牌的proxy应用，易用又强大。核心配置如下。</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">frontend</span> front<span class="hljs-number">443</span><br>    <span class="hljs-attribute">bind</span> :<span class="hljs-number">443</span> ssl crt-list /etc/haproxy/crt-list.txt alpn http/<span class="hljs-number">1</span>.<span class="hljs-number">1</span><br>    <span class="hljs-attribute">bind</span> :<span class="hljs-number">80</span><br>    <span class="hljs-attribute">mode</span> http<br>    <span class="hljs-attribute">redirect</span> scheme https code <span class="hljs-number">301</span> if !&#123; ssl_fc &#125;<br>    <span class="hljs-attribute">acl</span> is_xswl hdr(host) -i xswl.tnb.tw<br>    <span class="hljs-attribute">acl</span> is_yysy hdr(host) -i yysy.tnb.tw<br>    <span class="hljs-attribute">acl</span> is_awsl hdr(host) -i awsl.tnb.tw<br>    <span class="hljs-attribute">use_backend</span> fileserver<span class="hljs-number">8080</span> if is_xswl<br>    <span class="hljs-attribute">use_backend</span> aria<span class="hljs-number">2</span>c<span class="hljs-number">6800</span> if is_yysy<br>    <span class="hljs-attribute">use_backend</span> AriaNg<span class="hljs-number">8081</span> if is_awsl<br><br><span class="hljs-attribute">backend</span> fileserver<span class="hljs-number">8080</span><br>    <span class="hljs-attribute">mode</span> http<br>    <span class="hljs-attribute">server</span> fileserver<span class="hljs-number">8080</span> <span class="hljs-number">127.0.0.1:8080</span><br><br><span class="hljs-attribute">backend</span> AriaNg<span class="hljs-number">8081</span><br>    <span class="hljs-attribute">mode</span> http<br>    <span class="hljs-attribute">server</span> AriaNg<span class="hljs-number">8081</span> <span class="hljs-number">127.0.0.1:8081</span><br><br><span class="hljs-attribute">backend</span> aria<span class="hljs-number">2</span>c<span class="hljs-number">6800</span><br>    <span class="hljs-attribute">mode</span> http<br>    <span class="hljs-attribute">server</span> aria<span class="hljs-number">2</span>c<span class="hljs-number">6800</span> <span class="hljs-number">127.0.0.1:6800</span><br></code></pre></td></tr></table></figure>
+
+<p>通过acl创建hostname的判断条件，如果符合给定的条件则代理到对应的后端服务上。以下是aria2 frontend与文件下载页面的截图。</p>
+<p><img src="/images/aria2ng.png" srcset="/img/loading.gif" lazyload alt="aria2ng"></p>
+<p><img src="/images/nginx-autoindex.png" srcset="/img/loading.gif" lazyload alt="nginx-autoindex"></p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/aria2/">aria2</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/nginx/">nginx</a>
+                    
+                      <a class="hover-with-bg" href="/tags/haproxy/">haproxy</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！https://blog.boluotou.tech
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/01/03/2020-review/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">2020年回顾</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2020/12/17/minimalism-life-style/">
+                        <span class="hidden-mobile">我所理解的极简生活</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+              <!-- Comments -->
+              <article class="comments" id="comments" lazyload>
+                
+                  
+                
+                
+  <div class="disqus" style="width:100%">
+    <div id="disqus_thread"></div>
+    
+      <script>
+        Fluid.utils.loadComments('#disqus_thread', function() {
+          Fluid.utils.createCssLink('https://cdn.jsdelivr.net/npm/disqusjs@1.3.0/dist/disqusjs.css');
+          Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/disqusjs@1.3.0/dist/disqus.js', function() {
+            new DisqusJS({
+              shortname: 'gcnyin',
+              apikey: 'axEXO6tIip7EqeO3wdDoglRjBQgCwgK56jmZvsla1mBt7x9JHA2i5StHnonPvGLp'
+            });
+          });
+        });
+      </script>
+    
+    <noscript>Please enable JavaScript to view the comments</noscript>
+  </div>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a>© 2021 Made by Boluotou with ❤️</a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.3/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.1/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js" ></script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
