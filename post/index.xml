@@ -1,0 +1,1059 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on 菠萝头</title><link>https://blog.boluotou.tech/post/</link><description>Recent content in Posts on 菠萝头</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 14 Aug 2022 23:09:08 +0800</lastBuildDate><atom:link href="https://blog.boluotou.tech/post/index.xml" rel="self" type="application/rss+xml"/><item><title>一套充分利用本地机器的日志中心架构</title><link>https://blog.boluotou.tech/post/20220814-logging-center-architecture/</link><pubDate>Sun, 14 Aug 2022 23:09:08 +0800</pubDate><guid>https://blog.boluotou.tech/post/20220814-logging-center-architecture/</guid><description>&lt;p>&lt;img src="https://blog.boluotou.tech/logging-architecture.png"
+loading="lazy"
+alt="logging-architecture"
+>&lt;/p>
+&lt;ol>
+&lt;li>服务搭在k8s上，起一个DaemonSet使用Fluent-Bit收集所有日志，发到Kafka（这个kafka可以是云服务商提供的，或者是自建的，但无论如何要能被本地机器访问）。&lt;/li>
+&lt;li>本地机器也搞一个k8s集群，先搭ElasticSearch，再由Logstash收集Kafka中的日志（有插件）插入到es里，最后由Kibana读取。&lt;/li>
+&lt;/ol>
+&lt;p>具体命令懒得写了，大家自己研究吧。&lt;/p></description></item><item><title>最近搭的一套离线数仓架构</title><link>https://blog.boluotou.tech/post/20220807-offline-data-warehouse/</link><pubDate>Sun, 07 Aug 2022 21:18:13 +0800</pubDate><guid>https://blog.boluotou.tech/post/20220807-offline-data-warehouse/</guid><description>&lt;p>最近在搭公司的离线数仓，整理出了一批很实用的组件，在这里分享下。&lt;/p>
+&lt;ul>
+&lt;li>spark-sql&lt;/li>
+&lt;li>seatunnel&lt;/li>
+&lt;li>k8s&lt;/li>
+&lt;li>clickhouse&lt;/li>
+&lt;li>hive metastore&lt;/li>
+&lt;li>dolphin-scheduler&lt;/li>
+&lt;/ul>
+&lt;p>使用seatunnel+spark将数据从业务数据库导入clickhouse中，使用dolphin-scheduler调度clickhouse SQL生产dw层和ads层数据，最后再通过seatunnel将ads层数据写回业务系统数据库。hive metastore存储spark sql中的表信息。整个系统搭在k8s上，每个组件基本都有helm charts或者operator，极大地减少了部署难度。&lt;/p></description></item><item><title>2021年总结</title><link>https://blog.boluotou.tech/post/20220621-2021-review/</link><pubDate>Tue, 21 Jun 2022 22:42:56 +0800</pubDate><guid>https://blog.boluotou.tech/post/20220621-2021-review/</guid><description>&lt;p>这是一篇迟来的2总结。不知怎么的就忘了写了，一直拖到现在。&lt;/p>
+&lt;p>2021年是单调无聊的一年。&lt;/p>
+&lt;p>这一年都是在做实时数仓。主要精力都花在对口径、写sql上了，技术含量几乎为零。&lt;/p>
+&lt;p>三月到六月，部门搞了场战役，所有人都得996，非常累。每天下班后，我都只能躺在床上一动不动，完全不想干任何事。到了六月最后那段时间，我深陷抑郁情，每天上班和上坟一样。也是从这时起，我就想好了，以后找工作必须找一个work life balance的公司。&lt;/p>
+&lt;p>也是因为加班太多，不得不转移下注意力休息下。玩了一点《空洞骑士》，立马就喜欢上了，后来打了好一段时间，那会儿下班后，一直在打。除了“前辈”和“幅光”，其他的都打过了。&lt;/p>
+&lt;p>我好像每年都会有一两个月的时间完全不想学技术，下班后一点技术也不学，就是挥霍时间去休息。其实也挺好的，每天都高强度学习很难坚持下去。&lt;/p></description></item><item><title>使用akka踩的一些坑</title><link>https://blog.boluotou.tech/post/20210812-experience-using-akka/</link><pubDate>Thu, 12 Aug 2021 11:06:25 +0800</pubDate><guid>https://blog.boluotou.tech/post/20210812-experience-using-akka/</guid><description>&lt;p>最近在学习 akka，踩了很多坑，这里分享给大家。&lt;/p>
+&lt;h2 id="使用-akka-stream-限制并发度">使用 akka-stream 限制并发度&lt;/h2>
+&lt;p>原代码如下。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-scala" data-lang="scala">&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> fetchRlCnt&lt;span style="color:#f92672">(&lt;/span>pageNumbers&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Seq&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">Int&lt;/span>&lt;span style="color:#f92672">])&lt;/span>&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Future&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">Int&lt;/span>&lt;span style="color:#f92672">]&lt;/span> &lt;span style="color:#66d9ef">=&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">val&lt;/span> futures&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Seq&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">Future&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">HttpResponse&lt;/span>&lt;span style="color:#f92672">]]&lt;/span> &lt;span style="color:#66d9ef">=&lt;/span> pageNumbers
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>map&lt;span style="color:#f92672">(&lt;/span>page &lt;span style="color:#66d9ef">=&amp;gt;&lt;/span> &lt;span style="color:#a6e22e">Http&lt;/span>&lt;span style="color:#f92672">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>singleRequest&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#a6e22e">HttpRequest&lt;/span>&lt;span style="color:#f92672">(&lt;/span>uri &lt;span style="color:#66d9ef">=&lt;/span> &lt;span style="color:#e6db74">s&amp;#34;https://examples.org/mix_list/&lt;/span>&lt;span style="color:#e6db74">$page&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span>&lt;span style="color:#f92672">)))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">Future&lt;/span>&lt;span style="color:#f92672">.&lt;/span>sequence&lt;span style="color:#f92672">(&lt;/span>futures&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>map&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">.&lt;/span>map&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#a6e22e">Unmarshal&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">).&lt;/span>to&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">MixList&lt;/span>&lt;span style="color:#f92672">]))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>flatMap&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#a6e22e">Future&lt;/span>&lt;span style="color:#f92672">.&lt;/span>sequence&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>map&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">.&lt;/span>map&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">.&lt;/span>data&lt;span style="color:#f92672">.&lt;/span>rl&lt;span style="color:#f92672">.&lt;/span>length&lt;span style="color:#f92672">).&lt;/span>sum&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>本意是请求所有的分页内容，以为使用 singleRequest 同时请求所有的分页即可，没想到却出错了。&lt;/p>
+&lt;pre tabindex="0">&lt;code>(WaitingForResponseEntitySubscription)]Response entity was not subscribed after 1 second.
+Make sure to read the response `entity` body or call `entity.discardBytes()` on it
+&lt;/code>&lt;/pre>&lt;p>为什么会这样呢？&lt;/p>
+&lt;p>其实 akka-http 在 singleRequest 时，针对同一个 hostname 会创建一个连接池，如果有相同域名的请求可以提升请求速度。&lt;/p>
+&lt;p>但当函数参数&lt;code>pages&lt;/code>足够大，超过了连接池最大并发请求数时，新进入连接池的请求就得不到处理，也就会出现超时的情况。&lt;/p>
+&lt;p>如何解决呢？&lt;/p>
+&lt;p>可以将请求放到 akka-stream 中，限制同时处理的请求个数。&lt;code>mapAsyncUnordered&lt;/code>的第一个参数就是最大并发个数。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-scala" data-lang="scala">&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> fetchRlCnt&lt;span style="color:#f92672">(&lt;/span>pageNumbers&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Seq&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">Int&lt;/span>&lt;span style="color:#f92672">])&lt;/span>&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Future&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">Int&lt;/span>&lt;span style="color:#f92672">]&lt;/span> &lt;span style="color:#66d9ef">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">Source&lt;/span>&lt;span style="color:#f92672">(&lt;/span>pageNumbers&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>map&lt;span style="color:#f92672">(&lt;/span>it &lt;span style="color:#66d9ef">=&amp;gt;&lt;/span> &lt;span style="color:#a6e22e">HttpRequest&lt;/span>&lt;span style="color:#f92672">(&lt;/span>uri &lt;span style="color:#66d9ef">=&lt;/span> &lt;span style="color:#e6db74">s&amp;#34;https://examples.org/mix_list/&lt;/span>&lt;span style="color:#e6db74">$it&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span>&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>mapAsyncUnordered&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#ae81ff">5&lt;/span>&lt;span style="color:#f92672">)(&lt;/span>&lt;span style="color:#a6e22e">Http&lt;/span>&lt;span style="color:#f92672">().&lt;/span>singleRequest&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">).&lt;/span>flatMap&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#a6e22e">Unmarshal&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">).&lt;/span>to&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">MixList&lt;/span>&lt;span style="color:#f92672">]))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>map&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">.&lt;/span>data&lt;span style="color:#f92672">.&lt;/span>rl&lt;span style="color:#f92672">.&lt;/span>length&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>runFold&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">)(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span> &lt;span style="color:#f92672">+&lt;/span> &lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这样一来，在 akka-stream 层面做了最大并发个数的限制，HTTP 连接池也就不会超时了。&lt;/p>
+&lt;h2 id="使用-akka-http-json-代替-spray">使用 akka-http-json 代替 spray&lt;/h2>
+&lt;p>akka-http 自带的 json 库是&lt;a class="link" href="https://github.com/spray/spray-json" target="_blank" rel="noopener"
+>spray&lt;/a>，需要手动创建一个&lt;code>implicit JsonFormat&lt;/code>，不是很好用。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-scala" data-lang="scala">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> akka.http.scaladsl.server.Directives
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> spray.json._
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">// domain model
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span>&lt;span style="color:#66d9ef">final&lt;/span> &lt;span style="color:#66d9ef">case&lt;/span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">Item&lt;/span>&lt;span style="color:#f92672">(&lt;/span>name&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">String&lt;/span>&lt;span style="color:#f92672">,&lt;/span> id&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Long&lt;/span>&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">// collect your json format instances into a support trait:
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span>&lt;span style="color:#66d9ef">trait&lt;/span> &lt;span style="color:#a6e22e">JsonSupport&lt;/span> &lt;span style="color:#66d9ef">extends&lt;/span> &lt;span style="color:#a6e22e">SprayJsonSupport&lt;/span> &lt;span style="color:#66d9ef">with&lt;/span> &lt;span style="color:#a6e22e">DefaultJsonProtocol&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">implicit&lt;/span> &lt;span style="color:#66d9ef">val&lt;/span> itemFormat &lt;span style="color:#66d9ef">=&lt;/span> jsonFormat2&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#a6e22e">Item&lt;/span>&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">// use it wherever json (un)marshalling is needed
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span>&lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">MyJsonService&lt;/span> &lt;span style="color:#66d9ef">extends&lt;/span> &lt;span style="color:#a6e22e">Directives&lt;/span> &lt;span style="color:#66d9ef">with&lt;/span> &lt;span style="color:#a6e22e">JsonSupport&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">val&lt;/span> route &lt;span style="color:#66d9ef">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> get &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> pathSingleSlash &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> complete&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#a6e22e">Item&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;thing&amp;#34;&lt;/span>&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#ae81ff">42&lt;/span>&lt;span style="color:#f92672">))&lt;/span> &lt;span style="color:#75715e">// will render as JSON
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;a class="link" href="https://github.com/hseeberger/akka-http-json" target="_blank" rel="noopener"
+>akka-http-json&lt;/a>将许多 JSON 库与 akka-http 进行了集成，非常方便，我们这里选择比较易用的&lt;a class="link" href="https://circe.github.io/circe/" target="_blank" rel="noopener"
+>circe&lt;/a>。&lt;/p>
+&lt;pre tabindex="0">&lt;code>&amp;#34;de.heikoseeberger&amp;#34; %% &amp;#34;akka-http-circe&amp;#34; % &amp;#34;1.37.0&amp;#34;
+&lt;/code>&lt;/pre>&lt;p>使用时引入必要的包即可。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-scala" data-lang="scala">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> io.circe.generic.auto._
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">StreamerRoutes&lt;/span>&lt;span style="color:#f92672">(&lt;/span>streamerRepository&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">ActorRef&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">StreamerActor.Command&lt;/span>&lt;span style="color:#f92672">])&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">implicit&lt;/span> &lt;span style="color:#66d9ef">val&lt;/span> system&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">ActorSystem&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">])&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">implicit&lt;/span> &lt;span style="color:#66d9ef">val&lt;/span> timeout&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Timeout&lt;/span> &lt;span style="color:#f92672">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">Timeout&lt;/span>&lt;span style="color:#f92672">.&lt;/span>create&lt;span style="color:#f92672">(&lt;/span>system&lt;span style="color:#f92672">.&lt;/span>settings&lt;span style="color:#f92672">.&lt;/span>config&lt;span style="color:#f92672">.&lt;/span>getDuration&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;myapp.routes.ask-timeout&amp;#34;&lt;/span>&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> getStreamerCount&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Future&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">StreamerActor.StreamerCount&lt;/span>&lt;span style="color:#f92672">]&lt;/span> &lt;span style="color:#66d9ef">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> streamerRepository&lt;span style="color:#f92672">.&lt;/span>ask&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#a6e22e">StreamerActor&lt;/span>&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">QueryStreamerCount&lt;/span>&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">val&lt;/span> routes&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Route&lt;/span> &lt;span style="color:#f92672">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> path&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;streamerCount&amp;#34;&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> get &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> onSuccess&lt;span style="color:#f92672">(&lt;/span>getStreamerCount&lt;span style="color:#f92672">)(&lt;/span>complete&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>可以看到，circe 不需要手动创建 Format 对象，能够自动处理序列化。&lt;/p>
+&lt;p>但到这里还不算完。这里的 StreamerCount 其实是 trait，有两个实现类。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-scala" data-lang="scala">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">sealed&lt;/span> &lt;span style="color:#66d9ef">trait&lt;/span> &lt;span style="color:#a6e22e">StreamerCount&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">final&lt;/span> &lt;span style="color:#66d9ef">case&lt;/span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">StreamerCountResult&lt;/span>&lt;span style="color:#f92672">(&lt;/span>datetime&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Instant&lt;/span>&lt;span style="color:#f92672">,&lt;/span> count&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Int&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#66d9ef">extends&lt;/span> &lt;span style="color:#a6e22e">StreamerCount&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">final&lt;/span> &lt;span style="color:#66d9ef">case&lt;/span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">StreamerCountError&lt;/span>&lt;span style="color:#f92672">(&lt;/span>error&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">String&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#66d9ef">extends&lt;/span> &lt;span style="color:#a6e22e">StreamerCount&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>circe 在序列化时，会默认将实现类的名称作为 key 放入 json 中。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-json" data-lang="json">&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;StreamerCountResult&amp;#34;&lt;/span>: {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;datetime&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;2021-08-13T10:52:50.301390Z&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;count&amp;#34;&lt;/span>: &lt;span style="color:#ae81ff">2843&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这虽然保留了类型信息方便反序列化，但与外部系统进行交互时，会很显得很多余。&lt;/p>
+&lt;p>想要去除这个 key 的包装，我们可以引入&lt;code>circe-generic-extras&lt;/code>包。&lt;/p>
+&lt;pre tabindex="0">&lt;code>&amp;#34;io.circe&amp;#34; %% &amp;#34;circe-generic-extras&amp;#34; % &amp;#34;0.14.1&amp;#34;
+&lt;/code>&lt;/pre>&lt;p>引入&lt;code>io.circe.generic.extras.Configuration&lt;/code>并进行配置，再使用&lt;code>import io.circe.generic.extras.auto._&lt;/code>替换&lt;code>import io.circe.generic.auto._&lt;/code>即可。代码如下。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-scala" data-lang="scala">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">package&lt;/span> app
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> akka.actor.typed.scaladsl.AskPattern._
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> akka.actor.typed.&lt;span style="color:#f92672">{&lt;/span>&lt;span style="color:#a6e22e">ActorRef&lt;/span>&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#a6e22e">ActorSystem&lt;/span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> akka.http.scaladsl.model.&lt;span style="color:#f92672">{&lt;/span>&lt;span style="color:#a6e22e">ContentTypes&lt;/span>&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#a6e22e">HttpEntity&lt;/span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> akka.http.scaladsl.server.Directives._
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> akka.http.scaladsl.server.Route
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> akka.util.Timeout
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> io.circe.generic.extras.auto._
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> io.circe.generic.extras.Configuration
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> scala.concurrent.Future
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">StreamerRoutes&lt;/span>&lt;span style="color:#f92672">(&lt;/span>streamerRepository&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">ActorRef&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">StreamerActor.Command&lt;/span>&lt;span style="color:#f92672">])&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">implicit&lt;/span> &lt;span style="color:#66d9ef">val&lt;/span> system&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">ActorSystem&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">])&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">implicit&lt;/span> &lt;span style="color:#66d9ef">val&lt;/span> timeout&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Timeout&lt;/span> &lt;span style="color:#f92672">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">Timeout&lt;/span>&lt;span style="color:#f92672">.&lt;/span>create&lt;span style="color:#f92672">(&lt;/span>system&lt;span style="color:#f92672">.&lt;/span>settings&lt;span style="color:#f92672">.&lt;/span>config&lt;span style="color:#f92672">.&lt;/span>getDuration&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;myapp.routes.ask-timeout&amp;#34;&lt;/span>&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">implicit&lt;/span> &lt;span style="color:#66d9ef">val&lt;/span> genDevConfig&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Configuration&lt;/span> &lt;span style="color:#f92672">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">Configuration&lt;/span>&lt;span style="color:#f92672">.&lt;/span>default&lt;span style="color:#f92672">.&lt;/span>withDiscriminator&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;_type&amp;#34;&lt;/span>&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> getStreamerCount&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Future&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#66d9ef">StreamerActor.StreamerCount&lt;/span>&lt;span style="color:#f92672">]&lt;/span> &lt;span style="color:#66d9ef">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> streamerRepository&lt;span style="color:#f92672">.&lt;/span>ask&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#a6e22e">StreamerActor&lt;/span>&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">QueryStreamerCount&lt;/span>&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">val&lt;/span> routes&lt;span style="color:#66d9ef">:&lt;/span> &lt;span style="color:#66d9ef">Route&lt;/span> &lt;span style="color:#f92672">=&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> path&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;streamerCount&amp;#34;&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> get &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> onSuccess&lt;span style="color:#f92672">(&lt;/span>getStreamerCount&lt;span style="color:#f92672">)(&lt;/span>complete&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">_&lt;/span>&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>返回的 Response 变成了我们期望的样子，类型信息保留在了&lt;code>_type&lt;/code>字段上，未来反序列化时也不会问题。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-json" data-lang="json">&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;datetime&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;2021-08-13T10:57:35.209627Z&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;count&amp;#34;&lt;/span>: &lt;span style="color:#ae81ff">2883&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;_type&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;StreamerCountResult&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>浅谈TLV协议的实现</title><link>https://blog.boluotou.tech/post/20210712-tlv-protocol/</link><pubDate>Mon, 12 Jul 2021 22:10:50 +0800</pubDate><guid>https://blog.boluotou.tech/post/20210712-tlv-protocol/</guid><description>&lt;p>今天稍微聊点应用层网络协议设计。&lt;/p>
+&lt;h1 id="简介">简介&lt;/h1>
+&lt;p>众所周知，tcp是一种面向字节流的协议，可以看作一条无尽的水流。如果对水流的内容不加区分，便完全不知道各字节所代表的含义，进而无法处理。如此看来，设计一个能清晰划分字节流边界的应用层协议就显得非常必要。这便涉及到今天所讲的TLV协议。&lt;/p>
+&lt;p>TLV全称&lt;a class="link" href="https://en.wikipedia.org/wiki/Type%E2%80%93length%E2%80%93value" target="_blank" rel="noopener"
+>Type–length–value&lt;/a>，是大多数应用层协议的设计思路。主要内容包括&lt;/p>
+&lt;ol>
+&lt;li>最前面的若干位字节表明传统的是否为该协议（本文暂定为4个字节）&lt;/li>
+&lt;li>紧跟着若干字节（本文暂定为4个字节，也就是Java中的int），代表后续value的字节长度&lt;/li>
+&lt;li>最后是代表value的字节，其长度为2中所获得的数量&lt;/li>
+&lt;/ol>
+&lt;p>整个系统的状态机如图所示。&lt;/p>
+&lt;p>&lt;img src="https://blog.boluotou.tech/tlv-state-machine.png"
+loading="lazy"
+alt="tlv-state-machine"
+>&lt;/p>
+&lt;h1 id="实现">实现&lt;/h1>
+&lt;h2 id="不同状态的handler">不同状态的Handler&lt;/h2>
+&lt;p>用nio具体编写时，可以先抽象出一个&lt;code>Handler&lt;/code>接口，可以接受一个&lt;code>byte&lt;/code>进行处理。再添加三个实现（私有方法），代表0、1、2这三种状态对应的&lt;code>Handler&lt;/code>。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-java" data-lang="java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">interface&lt;/span> &lt;span style="color:#a6e22e">Handler&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">int&lt;/span> &lt;span style="color:#a6e22e">feed&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">byte&lt;/span> b&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">int&lt;/span> &lt;span style="color:#a6e22e">readType&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">byte&lt;/span> b&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// TODO
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">int&lt;/span> &lt;span style="color:#a6e22e">readLength&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">byte&lt;/span> b&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// TODO
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">int&lt;/span> &lt;span style="color:#a6e22e">readValue&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">byte&lt;/span> b&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// TODO
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="状态的定义">状态的定义&lt;/h2>
+&lt;p>接着定义三种状态对应的code和一个&lt;code>Handler&lt;/code>数组，这样后面可以用当前状态去取对应的&lt;code>Handler&lt;/code>（&lt;code>handlers[state]&lt;/code>）。&lt;code>state&lt;/code>表示当前状态，初始值当然是&lt;code>TYPE_STATE&lt;/code>。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-java" data-lang="java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">static&lt;/span> &lt;span style="color:#66d9ef">final&lt;/span> &lt;span style="color:#66d9ef">int&lt;/span> TYPE_STATE &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">static&lt;/span> &lt;span style="color:#66d9ef">final&lt;/span> &lt;span style="color:#66d9ef">int&lt;/span> LENGTH_STATE &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">static&lt;/span> &lt;span style="color:#66d9ef">final&lt;/span> &lt;span style="color:#66d9ef">int&lt;/span> VALUE_STATE &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">final&lt;/span> Handler&lt;span style="color:#f92672">[]&lt;/span> handlers &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> Handler&lt;span style="color:#f92672">[]{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">this&lt;/span>&lt;span style="color:#f92672">::&lt;/span>readType&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">this&lt;/span>&lt;span style="color:#f92672">::&lt;/span>readLength&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">this&lt;/span>&lt;span style="color:#f92672">::&lt;/span>readValue
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">int&lt;/span> state &lt;span style="color:#f92672">=&lt;/span> TYPE_STATE&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="对外接口">对外接口&lt;/h2>
+&lt;p>对外接口是&lt;code>read()&lt;/code>，供外层在读事件就绪时调用。这里会不停地一个字节一个字节的读取ByteBuffer，并调用当前状态的&lt;code>Handler&lt;/code>去处理。如果返回&lt;code>-1&lt;/code>代表处理失败，需要关闭连接。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-java" data-lang="java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">public&lt;/span> &lt;span style="color:#66d9ef">void&lt;/span> &lt;span style="color:#a6e22e">read&lt;/span>&lt;span style="color:#f92672">()&lt;/span> &lt;span style="color:#66d9ef">throws&lt;/span> IOException &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">while&lt;/span> &lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">true&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">int&lt;/span> i &lt;span style="color:#f92672">=&lt;/span> channel&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">read&lt;/span>&lt;span style="color:#f92672">(&lt;/span>buffer&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">(&lt;/span>i &lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">1&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> close&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">(&lt;/span>i &lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#66d9ef">return&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> buffer&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">flip&lt;/span>&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">while&lt;/span> &lt;span style="color:#f92672">(&lt;/span>buffer&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">hasRemaining&lt;/span>&lt;span style="color:#f92672">())&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">byte&lt;/span> b &lt;span style="color:#f92672">=&lt;/span> buffer&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">get&lt;/span>&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">int&lt;/span> f &lt;span style="color:#f92672">=&lt;/span> handlers&lt;span style="color:#f92672">[&lt;/span>state&lt;span style="color:#f92672">].&lt;/span>&lt;span style="color:#a6e22e">feed&lt;/span>&lt;span style="color:#f92672">(&lt;/span>b&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">(&lt;/span>f &lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">1&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> close&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> buffer&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">clear&lt;/span>&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="接受到的数据">接受到的数据&lt;/h2>
+&lt;p>接着定义若干&lt;code>byte[]&lt;/code>，代表每个状态接收的字节，同时还有若干&lt;code>Pointer&lt;/code>代表当前填充到第几个字节。注意，代表&lt;code>value&lt;/code>的&lt;code>data&lt;/code>并没有初始化，因为它的长度是根据&lt;code>length&lt;/code>确定的。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-java" data-lang="java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">final&lt;/span> &lt;span style="color:#66d9ef">byte&lt;/span>&lt;span style="color:#f92672">[]&lt;/span> type &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> &lt;span style="color:#66d9ef">byte&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#ae81ff">4&lt;/span>&lt;span style="color:#f92672">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">byte&lt;/span> typePointer &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">final&lt;/span> &lt;span style="color:#66d9ef">byte&lt;/span>&lt;span style="color:#f92672">[]&lt;/span> length &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> &lt;span style="color:#66d9ef">byte&lt;/span>&lt;span style="color:#f92672">[&lt;/span>&lt;span style="color:#ae81ff">4&lt;/span>&lt;span style="color:#f92672">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">byte&lt;/span> lengthPointer &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">int&lt;/span> dataLength &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">byte&lt;/span>&lt;span style="color:#f92672">[]&lt;/span> data&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="readtype-handler">readType Handler&lt;/h2>
+&lt;p>接下来就可以实现之前提到的三个&lt;code>Handler&lt;/code>了。先看&lt;code>readType&lt;/code>，每次一次&lt;code>byte&lt;/code>进来，它就会填充到&lt;code>type&lt;/code>(byte[])的下一位，并判断是否满足长度，如果不满足则等待下一个byte。如果长度够4位了，但内容和约定的不一样，会返回&lt;code>-1&lt;/code>，代表内容有误，供上层处理。如果长度和内容正确，那么状态就转移到&lt;code>LENGTH_STATE&lt;/code>上，由下一个&lt;code>readLength Handler&lt;/code>处理。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-java" data-lang="java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">int&lt;/span> &lt;span style="color:#a6e22e">readType&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">byte&lt;/span> b&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> type&lt;span style="color:#f92672">[&lt;/span>typePointer&lt;span style="color:#f92672">]&lt;/span> &lt;span style="color:#f92672">=&lt;/span> b&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">(&lt;/span>typePointer &lt;span style="color:#f92672">!=&lt;/span> &lt;span style="color:#ae81ff">3&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> typePointer&lt;span style="color:#f92672">++;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> typePointer &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">(!&lt;/span>Arrays&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">equals&lt;/span>&lt;span style="color:#f92672">(&lt;/span>type&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> &lt;span style="color:#66d9ef">byte&lt;/span>&lt;span style="color:#f92672">[]{&lt;/span>&lt;span style="color:#ae81ff">0x01&lt;/span>&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#ae81ff">0x23&lt;/span>&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#ae81ff">0x45&lt;/span>&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#ae81ff">0x67&lt;/span>&lt;span style="color:#f92672">}))&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">1&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> state &lt;span style="color:#f92672">=&lt;/span> LENGTH_STATE&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="readlength-handler">readLength Handler&lt;/h2>
+&lt;p>&lt;code>readLength Handler&lt;/code>和上面也是类似的，额外多了一步，将读取的value长度保存到&lt;code>dataLength&lt;/code>字段中，并将状态转移到&lt;code>VALUE_STATE&lt;/code>上。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-java" data-lang="java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">int&lt;/span> &lt;span style="color:#a6e22e">readLength&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">byte&lt;/span> b&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> length&lt;span style="color:#f92672">[&lt;/span>lengthPointer&lt;span style="color:#f92672">]&lt;/span> &lt;span style="color:#f92672">=&lt;/span> b&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">(&lt;/span>lengthPointer &lt;span style="color:#f92672">!=&lt;/span> &lt;span style="color:#ae81ff">3&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lengthPointer&lt;span style="color:#f92672">++;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lengthPointer &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> dataLength &lt;span style="color:#f92672">=&lt;/span> ByteBuffer&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">wrap&lt;/span>&lt;span style="color:#f92672">(&lt;/span>length&lt;span style="color:#f92672">).&lt;/span>&lt;span style="color:#a6e22e">getInt&lt;/span>&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">(&lt;/span>dataLength &lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">1&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> data &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> &lt;span style="color:#66d9ef">byte&lt;/span>&lt;span style="color:#f92672">[&lt;/span>dataLength&lt;span style="color:#f92672">];&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> state &lt;span style="color:#f92672">=&lt;/span> VALUE_STATE&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="readvalue-handler">readValue Handler&lt;/h2>
+&lt;p>&lt;code>readValue Handler&lt;/code>将字节存储起来，直到数量和&lt;code>readLength&lt;/code>中获得的&lt;code>dataLength&lt;/code>值一样，之后就可以进行正常的业务逻辑处理，我这里是简单地print所有数据。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-java" data-lang="java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">int&lt;/span> &lt;span style="color:#a6e22e">readValue&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#66d9ef">byte&lt;/span> b&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> data&lt;span style="color:#f92672">[&lt;/span>dataPointer&lt;span style="color:#f92672">]&lt;/span> &lt;span style="color:#f92672">=&lt;/span> b&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">(&lt;/span>dataPointer &lt;span style="color:#f92672">!=&lt;/span> dataLength &lt;span style="color:#f92672">-&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> dataPointer&lt;span style="color:#f92672">++;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> dataPointer &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> process&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> state &lt;span style="color:#f92672">=&lt;/span> TYPE_STATE&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">void&lt;/span> &lt;span style="color:#a6e22e">process&lt;/span>&lt;span style="color:#f92672">()&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">(&lt;/span>data &lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#66d9ef">null&lt;/span>&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#66d9ef">return&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> String s &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> String&lt;span style="color:#f92672">(&lt;/span>data&lt;span style="color:#f92672">,&lt;/span> StandardCharsets&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">UTF_8&lt;/span>&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> System&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">out&lt;/span>&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">println&lt;/span>&lt;span style="color:#f92672">(&lt;/span>s&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h1 id="总结">总结&lt;/h1>
+&lt;p>tlv协议的实现大致就是这样。实现一个状态机，根据输入，判断是否转移到下一步状态。本文的实现比较简单，&lt;code>value&lt;/code>是作为请求的&lt;code>body&lt;/code>存在的，如果需要，还可以加上&lt;code>Header&lt;/code>或timeout处理之类额外的功能。&lt;/p>
+&lt;p>原文代码在&lt;a class="link" href="https://github.com/gcnyin/raw-nio/blob/master/src/main/java/com/github/gcnyin/rawnio/tlv" target="_blank" rel="noopener"
+>这里&lt;/a>，里面除了TLV还有其他java nio的实践，欢迎交流。&lt;/p>
+&lt;p>参考资料&lt;/p>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://en.wikipedia.org/wiki/Type%E2%80%93length%E2%80%93value" target="_blank" rel="noopener"
+>https://en.wikipedia.org/wiki/Type%E2%80%93length%E2%80%93value&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>我的macOS软件清单</title><link>https://blog.boluotou.tech/post/20210629-macos-softwares/</link><pubDate>Tue, 29 Jun 2021 20:31:06 +0800</pubDate><guid>https://blog.boluotou.tech/post/20210629-macos-softwares/</guid><description>&lt;p>工作后一直用MacBook Pro(15款和17款)，除了公司发的，自己也有一台，现在已经完全习惯了在macOS下开发。macOS下的各种工具基本都把玩了一遍，有一些非常顺手，格外喜欢，这里分享给大家。&lt;/p>
+&lt;h1 id="操作系统">操作系统&lt;/h1>
+&lt;p>已经升级到了Big Sur，但发现很多软件有兼容性问题，所以还是推荐大家用Catalina。&lt;/p>
+&lt;ul>
+&lt;li>Catalina&lt;/li>
+&lt;/ul>
+&lt;h1 id="浏览器">浏览器&lt;/h1>
+&lt;p>虽然我很喜欢Firefox，但这些年的发展实在不怎么亮眼。而且Firefox还搞了中国特供版，账号系统和国际版不能兼容，登录时经常不知道到底使用了哪个版本，实在太窝囊了。还是老老实实用Chrome。&lt;/p>
+&lt;ul>
+&lt;li>Chrome&lt;/li>
+&lt;/ul>
+&lt;h1 id="编辑器">编辑器&lt;/h1>
+&lt;p>已经2021年了，编辑器首选vscode。虽然Sublime Text出了3.x，但用着不如vscode顺手。命令行里一般用vim。学过emacs，但不是很熟练。&lt;/p>
+&lt;ul>
+&lt;li>Visual studio code&lt;/li>
+&lt;li>Vim&lt;/li>
+&lt;/ul>
+&lt;h1 id="ide">IDE&lt;/h1>
+&lt;p>不用想，写Java/Scala永远离不开Jetbrains家的Intellij IDEA。&lt;/p>
+&lt;ul>
+&lt;li>Intellij IDEA&lt;/li>
+&lt;/ul>
+&lt;h1 id="容器">容器&lt;/h1>
+&lt;p>经常需要启动一些后端中间件，Docker必须有。&lt;/p>
+&lt;ul>
+&lt;li>docker&lt;/li>
+&lt;/ul>
+&lt;h1 id="终端">终端&lt;/h1>
+&lt;p>只有它了。&lt;/p>
+&lt;ul>
+&lt;li>iterm2&lt;/li>
+&lt;/ul>
+&lt;h1 id="命令行">命令行&lt;/h1>
+&lt;p>我这几年积累了很多命令行工具，每一个都无可替代。&lt;/p>
+&lt;ul>
+&lt;li>ohmyzsh&lt;/li>
+&lt;li>ohmyzsh theme
+&lt;ul>
+&lt;li>powerlevel10k &lt;strong>强烈推荐&lt;/strong>，功能很完备一个主题&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>ohmyzsh plugins
+&lt;ul>
+&lt;li>zsh-autosuggestions 根据历史记录自动推荐命令&lt;/li>
+&lt;li>zsh-syntax-highlighting 命令行语法高亮，再也不用担心用错命令&lt;/li>
+&lt;li>fzf&lt;/li>
+&lt;li>git-open&lt;/li>
+&lt;li>docker&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>fzf: 快速查找文件、进程&lt;/li>
+&lt;li>tmux: 终端复用工具，强烈推荐，搭配这个&lt;a class="link" href="https://github.com/gpakosz/.tmux" target="_blank" rel="noopener"
+>配置&lt;/a>&lt;/li>
+&lt;li>tldr: 总结了各个命令的常见用法&lt;/li>
+&lt;li>nvm: 管理nodejs版本&lt;/li>
+&lt;li>jenv: 管理jdk版本&lt;/li>
+&lt;li>z: 智能目录跳转&lt;/li>
+&lt;li>tig: git客户端&lt;/li>
+&lt;li>tree: 目录树&lt;/li>
+&lt;li>ack: grep替代品&lt;/li>
+&lt;li>mosh: mosh客户端&lt;/li>
+&lt;li>ncdu: 查看磁盘使用情况&lt;/li>
+&lt;li>htop: 查看进程&lt;/li>
+&lt;li>diff-so-fancy: 很好的文本比对工具&lt;/li>
+&lt;/ul>
+&lt;h1 id="字体">字体&lt;/h1>
+&lt;p>更纱黑体作为等宽字体，不仅适配了多国语言，也同时拥有命令行(Term)和等宽(Mono)这两种不同场景的等宽字体。&lt;/p>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://github.com/be5invis/Sarasa-Gothic/" target="_blank" rel="noopener"
+>更纱黑体 Sarasa Gothic&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;h1 id="窗口管理">窗口管理&lt;/h1>
+&lt;p>macOS的原生窗口管理功能很少，必须用其他软件加强。rectangle是一个，hammerspoon自己写配置也是一个，其他的都要付费，不是很感冒。&lt;/p>
+&lt;ul>
+&lt;li>Rectangle&lt;/li>
+&lt;/ul>
+&lt;h1 id="输入法">输入法&lt;/h1>
+&lt;p>我喜欢五笔，所以并没有太多选择。&lt;/p>
+&lt;ul>
+&lt;li>清歌输入法&lt;/li>
+&lt;/ul>
+&lt;h1 id="绘画">绘画&lt;/h1>
+&lt;p>我画的是板绘，可惜windows下流行的板绘软件很多并不支持macOS，最终选择了KDE开源的Krita。&lt;/p>
+&lt;ul>
+&lt;li>Krita&lt;/li>
+&lt;/ul>
+&lt;h1 id="键盘化">键盘化&lt;/h1>
+&lt;p>键盘的效率远高于鼠标，所以能用键盘完成的事情要尽可能用键盘。&lt;/p>
+&lt;ul>
+&lt;li>alfred4&lt;/li>
+&lt;li>hammerspoon（可以参考我的上一篇博文）&lt;/li>
+&lt;/ul>
+&lt;h1 id="总结">总结&lt;/h1>
+&lt;p>这一套配置更侧重于命令行和键盘操作，需要配置的东西也有一些（比如hammerspoon)，但调教好了之后用起来还是很爽的。可惜macOS下好像没什么工具可以很好的操作鼠标，有用过vimac，但发现会提高输入延迟。&lt;/p></description></item><item><title>使用hammerspoon管理macOS窗口</title><link>https://blog.boluotou.tech/post/20210526-use-hammerspoon-to-manage-macos-window/</link><pubDate>Wed, 26 May 2021 19:49:27 +0800</pubDate><guid>https://blog.boluotou.tech/post/20210526-use-hammerspoon-to-manage-macos-window/</guid><description>&lt;p>macOS没有内置窗口管理功能，需要安装第三方软件来实现。常用的免费软件有Spectacle和ShiftIt，这已不再维护。今天将macOS升级到11.3后，发现ShiftIt彻底不能使用了。搜寻后在&lt;a class="link" href="https://github.com/fikovnik/ShiftIt/wiki/The-Hammerspoon-Alternative" target="_blank" rel="noopener"
+>ShiftIt wiki&lt;/a>里找到了替代品&lt;a class="link" href="http://www.hammerspoon.org/" target="_blank" rel="noopener"
+>hammerspoon&lt;/a>。&lt;/p>
+&lt;h1 id="介绍">介绍&lt;/h1>
+&lt;blockquote>
+&lt;p>Hammerspoon 是一款macOS平台的免费开源软件，通过桥接操作系统与 Lua 脚本引擎的方式，让我们可以通过编写 Lua 代码来实现操作应用程序、窗口、鼠标、文本、音频设备、电池、屏幕、剪切板、定位、wifi等。基本囊括了系统的各方面。&lt;/p>
+&lt;/blockquote>
+&lt;h1 id="安装">安装&lt;/h1>
+&lt;pre tabindex="0">&lt;code>brew cask install hammerspoon
+&lt;/code>&lt;/pre>&lt;h1 id="编写脚本">编写脚本&lt;/h1>
+&lt;p>创建&lt;code>.hammerspoon&lt;/code>目录和&lt;code>init.lua&lt;/code>文件。&lt;/p>
+&lt;pre tabindex="0">&lt;code>mkdir ~/.hammerspoon
+cd ~/.hammerspoon
+touch init.lua
+&lt;/code>&lt;/pre>&lt;p>编辑&lt;code>init.lua&lt;/code>，填写以下内容。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-lua" data-lang="lua">&lt;span style="display:flex;">&lt;span>hs.window.animationDuration &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>units &lt;span style="color:#f92672">=&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> right50 &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> left50 &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> top50 &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> bot50 &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> maximum &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind({ &lt;span style="color:#e6db74">&amp;#39;ctrl&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;alt&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;cmd&amp;#39;&lt;/span>}, &lt;span style="color:#e6db74">&amp;#39;n&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">local&lt;/span> win &lt;span style="color:#f92672">=&lt;/span> hs.window.focusedWindow()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">-- get the screen where the focused window is displayed, a.k.a. current screen&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">local&lt;/span> screen &lt;span style="color:#f92672">=&lt;/span> win:screen()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">-- compute the unitRect of the focused window relative to the current screen&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">-- and move the window to the next screen setting the same unitRect&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> win:move(win:frame():toUnitRect(screen:frame()), screen:next(), &lt;span style="color:#66d9ef">true&lt;/span>, &lt;span style="color:#ae81ff">0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>mash &lt;span style="color:#f92672">=&lt;/span> { &lt;span style="color:#e6db74">&amp;#39;ctrl&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;alt&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;cmd&amp;#39;&lt;/span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;right&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.right50, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;left&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.left50, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;up&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.top50, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;down&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.bot50, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;m&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.maximum, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这个脚本将若干功能绑定到快捷键上，包括&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>n&lt;/code> - 将当前窗口移动到下一个显示器&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>↑&lt;/code> - 将当前窗口移动到屏幕上半边&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>↓&lt;/code> - 将当前窗口移动到屏幕下半边&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>←&lt;/code> - 将当前窗口移动到屏幕右半边&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>→&lt;/code> - 将当前窗口移动到屏幕左半边&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>m&lt;/code> - 将当前窗口最大化&lt;/li>
+&lt;/ul>
+&lt;p>配置好后并不能立即使用，还需要启动Hammerspoon。&lt;/p>
+&lt;h1 id="启动">启动&lt;/h1>
+&lt;p>打开Hammerspoon软件，点击&lt;code>Reload config&lt;/code>，这样就可以愉快地管理窗口了。&lt;/p>
+&lt;h1 id="结论">结论&lt;/h1>
+&lt;p>至此，我们已经实现了窗口管理的基本功能。当然，Hammerspoon的功能远不止此，感兴趣的读者可以去&lt;a class="link" href="http://www.hammerspoon.org/" target="_blank" rel="noopener"
+>Hammerspoon官网&lt;/a>了解。&lt;/p></description></item><item><title>2020年回顾</title><link>https://blog.boluotou.tech/post/20210103-2020-review/</link><pubDate>Sun, 03 Jan 2021 02:26:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20210103-2020-review/</guid><description>&lt;p>2020年是我人生中最不寻常的一年，经历了疫情、换工作两件大事。&lt;/p>
+&lt;h2 id="疫情">疫情&lt;/h2>
+&lt;p>这个大家都经历过，不说了。&lt;/p>
+&lt;h2 id="换工作">换工作&lt;/h2>
+&lt;p>马云有句话说的好，“员工的离职原因很多，但其实就两点：一，钱没给到位；二，心委屈了”。我就属于钱没给到位，心还委屈了的。还好拿到了一份还不错的offer。和新同事相处了一段时间，感觉他们人都还不错。&lt;/p>
+&lt;h2 id="技术">技术&lt;/h2>
+&lt;p>上半年主要在学AWS，因为客户在用。我其实是不太想学这个的，因为海外客户，他们的这套技术栈和国内主流技术栈大相迳庭，以后很难用到。不过硬着头皮学习后发现AWS还是很先进的。&lt;/p>
+&lt;p>下半年主要学习找工作需要的国内常见的技术，包括MySQL, K8s，JVM之类的。因为新工作的关系，对学习了Flink。Flink强大又复杂，学习起来很有意思。&lt;/p>
+&lt;h2 id="生活">生活&lt;/h2>
+&lt;p>因为新工作的原因，一个人来到陌生的城市工作。好在之前有很多在网上认识的朋友，给予了一些生活上的指导。和其中几个面基了。&lt;/p>
+&lt;h2 id="总结">总结&lt;/h2>
+&lt;p>总的来说还不错，比我预想的要好很多。新的一年也要加油啊！&lt;/p></description></item><item><title>使用haproxy，nginx与aria2搭建下载服务</title><link>https://blog.boluotou.tech/post/20201226-haproxy-nginx-and-aria2/</link><pubDate>Sat, 26 Dec 2020 00:00:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20201226-haproxy-nginx-and-aria2/</guid><description>&lt;p>最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。&lt;/p>
+&lt;p>架构大致如下。&lt;/p>
+&lt;p>&lt;img src="https://blog.boluotou.tech/wangpan-arch.jpg"
+loading="lazy"
+alt="wangpan-arch"
+>&lt;/p>
+&lt;p>Aria2配置如下，大家基本可以直接照抄，只需要修改下&lt;code>rpc-secret&lt;/code>，用&lt;code>aria2c --conf-path=/root/aria2/aria2.conf -D&lt;/code>命令启动即可。&lt;/p>
+&lt;pre tabindex="0">&lt;code class="language-conf" data-lang="conf"># touch /data/aria2.session
+# vim /etc/aria2/aria2.conf
+## &amp;#39;#&amp;#39;开头为注释内容, 选项都有相应的注释说明, 根据需要修改 ##
+## 被注释的选项填写的是默认值, 建议在需要修改时再取消注释 ##
+## 文件保存相关 ##
+# 文件的保存路径(可使用绝对路径或相对路径), 默认: 当前启动位置
+dir=/root/Downloads
+# 启用磁盘缓存, 0为禁用缓存, 需1.16以上版本, 默认:16M
+disk-cache=32M
+# 文件预分配方式, 能有效降低磁盘碎片, 默认:prealloc
+# 预分配所需时间: none &amp;lt; falloc ? trunc &amp;lt; prealloc
+# falloc和trunc则需要文件系统和内核支持
+# NTFS建议使用falloc, EXT3/4建议trunc, MAC 下需要注释此项
+file-allocation=trunc
+# 断点续传
+continue=true
+## 下载连接相关 ##
+# 最大同时下载任务数, 运行时可修改, 默认:5
+max-concurrent-downloads=10
+# 同一服务器连接数, 添加时可指定, 默认:1
+max-connection-per-server=10
+# 最小文件分片大小, 添加时可指定, 取值范围1M -1024M, 默认:20M
+# 假定size=10M, 文件为20MiB 则使用两个来源下载; 文件为15MiB 则使用一个来源下载
+min-split-size=10M
+# 单个任务最大线程数, 添加时可指定, 默认:5
+split=5
+# 整体下载速度限制, 运行时可修改, 默认:0
+#max-overall-download-limit=0
+# 单个任务下载速度限制, 默认:0
+#max-download-limit=0
+# 整体上传速度限制, 运行时可修改, 默认:0
+#max-overall-upload-limit=0
+# 单个任务上传速度限制, 默认:0
+#max-upload-limit=0
+# 禁用IPv6, 默认:false
+disable-ipv6=true
+## 进度保存相关 ##
+# 从会话文件中读取下载任务
+input-file=/root/aria2/aria2.session
+# 在Aria2退出时保存`错误/未完成`的下载任务到会话文件
+save-session=/root/aria2/aria2.session
+# 定时保存会话, 0为退出时才保存, 需1.16.1以上版本, 默认:0
+save-session-interval=60
+## RPC相关设置 ##
+pause=false
+rpc-allow-origin-all=true
+rpc-listen-all=true
+rpc-save-upload-metadata=true
+rpc-secure=false
+# 启用RPC, 默认:false
+enable-rpc=true
+# 允许所有来源, 默认:false
+#rpc-allow-origin-all=true
+# 允许非外部访问, 默认:false
+#rpc-listen-all=true
+# 事件轮询方式, 取值:[epoll, kqueue, port, poll, select], 不同系统默认值不同
+event-poll=epoll
+# RPC监听端口, 端口被占用时可以修改, 默认:6800
+rpc-listen-port=6800
+# 设置的RPC授权令牌, v1.18.4新增功能, 取代 --rpc-user 和 --rpc-passwd 选项
+rpc-secret=XXXXXX
+# 设置的RPC访问用户名, 此选项新版已废弃, 建议改用 --rpc-secret 选项
+#rpc-user=&amp;lt;USER&amp;gt;
+# 设置的RPC访问密码, 此选项新版已废弃, 建议改用 --rpc-secret 选项
+#rpc-passwd=&amp;lt;PASSWD&amp;gt;
+## BT/PT下载相关 ##
+# 当下载的是一个种子(以.torrent结尾)时, 自动开始BT任务, 默认:true
+#follow-torrent=true
+# BT监听端口, 当端口被屏蔽时使用, 默认:6881-6999
+listen-port=51413
+# 单个种子最大连接数, 默认:55
+#bt-max-peers=55
+# 打开DHT功能, PT需要禁用, 默认:true
+enable-dht=true
+# 打开IPv6 DHT功能, PT需要禁用
+#enable-dht6=false
+# DHT网络监听端口, 默认:6881-6999
+#dht-listen-port=6881-6999
+# 本地节点查找, PT需要禁用, 默认:false
+bt-enable-lpd=true
+# 种子交换, PT需要禁用, 默认:true
+enable-peer-exchange=false
+# 每个种子限速, 对少种的PT很有用, 默认:50K
+#bt-request-peer-speed-limit=50K
+# 客户端伪装, PT需要
+#peer-id-prefix=-TR2770-
+user-agent=Transmission/2.92
+#user-agent=netdisk;4.4.0.6;PC;PC-Windows;6.2.9200;WindowsBaiduYunGuanJia
+# 当种子的分享率达到这个数时, 自动停止做种, 0为一直做种, 默认:1.0
+seed-ratio=1.0
+#作种时间大于30分钟，则停止作种
+seed-time=30
+# 强制保存会话, 话即使任务已经完成, 默认:false
+# 较新的版本开启后会在任务完成后依然保留.aria2文件
+#force-save=false
+# BT校验相关, 默认:true
+#bt-hash-check-seed=true
+# 继续之前的BT任务时, 无需再次校验, 默认:false
+bt-seed-unverified=true
+# 保存磁力链接元数据为种子文件(.torrent文件), 默认:false
+bt-save-metadata=true
+#下载完成后删除.ara2的同名文件
+on-download-complete=/root/aria2/delete_aria2
+&lt;/code>&lt;/pre>&lt;p>Aria2后端搭建好后，还需要一个前端页面去操作，这里选用&lt;a class="link" href="https://github.com/mayswind/AriaNg" target="_blank" rel="noopener"
+>AriaNg&lt;/a>，下载最新版本，置于&lt;code>/root/Aria2Ng&lt;/code>目录下，同时配置nginx来host这个页面。Nginx配置如下。注意，使用了8081端口，之后还会提到它。&lt;/p>
+&lt;pre tabindex="0">&lt;code>server {
+listen 8081;
+location / {
+autoindex on;
+root /root/AriaNg;
+}
+}
+&lt;/code>&lt;/pre>&lt;p>接着搭建静态文件服务器，在之前的aria2配置里，默认下载目录为&lt;code>/root/Downloads&lt;/code>，我们只需要建一个文件下载服务器，绑定到这个目录即可。好在nginx提供了开箱即用的文件下载服务器。配置如下，端口为8080。&lt;/p>
+&lt;pre tabindex="0">&lt;code>server {
+listen 8080;
+location / {
+autoindex on;
+root /root/Downloads;
+}
+}
+&lt;/code>&lt;/pre>&lt;p>这三个服务全都在同一台机器上，使用端口访问很不方便，所以加一个代理，根据hostname的不同代理到不同服务上。这里我用的是haproxy，haproxy是一一款老牌的proxy应用，易用又强大。核心配置如下。&lt;/p>
+&lt;pre tabindex="0">&lt;code>frontend front443
+bind :443 ssl crt-list /etc/haproxy/crt-list.txt alpn http/1.1
+bind :80
+mode http
+redirect scheme https code 301 if !{ ssl_fc }
+acl is_xswl hdr(host) -i xswl.tnb.tw
+acl is_yysy hdr(host) -i yysy.tnb.tw
+acl is_awsl hdr(host) -i awsl.tnb.tw
+use_backend fileserver8080 if is_xswl
+use_backend aria2c6800 if is_yysy
+use_backend AriaNg8081 if is_awsl
+backend fileserver8080
+mode http
+server fileserver8080 127.0.0.1:8080
+backend AriaNg8081
+mode http
+server AriaNg8081 127.0.0.1:8081
+backend aria2c6800
+mode http
+server aria2c6800 127.0.0.1:6800
+&lt;/code>&lt;/pre>&lt;p>通过acl创建hostname的判断条件，如果符合给定的条件则代理到对应的后端服务上。以下是aria2 frontend与文件下载页面的截图。&lt;/p>
+&lt;p>&lt;img src="https://blog.boluotou.tech/aria2ng.png"
+loading="lazy"
+alt="aria2ng"
+>&lt;/p>
+&lt;p>&lt;img src="https://blog.boluotou.tech/nginx-autoindex.png"
+loading="lazy"
+alt="nginx-autoindex"
+>&lt;/p></description></item><item><title>AWS SQS如何实现指数退避</title><link>https://blog.boluotou.tech/post/20200808-exponential-backoff-in-sqs/</link><pubDate>Sat, 08 Aug 2020 16:35:20 +0800</pubDate><guid>https://blog.boluotou.tech/post/20200808-exponential-backoff-in-sqs/</guid><description>&lt;p>SQS 全称 Simple queue service，是 AWS 推出一款消息队列服务。按照 AWS 官方文档的说法，SQS 居有高吞吐、高可用的特性。从我个人的开发体验来看，SQS 是一款相当易用并且功能强大的消息队列服务，满足了生产使用的大部分需求。&lt;/p>
+&lt;blockquote>
+&lt;p>Amazon Simple Queue Service (SQS) 是一种完全托管的消息队列服务，可让您分离和扩展微服务、分布式系统和无服务器应用程序。SQS 消除了与管理和运营消息型中间件相关的复杂性和开销，并使开发人员能够专注于重要工作。借助 SQS，您可以在软件组件之间发送、存储和接收任何规模的消息，而不会丢失消息，并且无需其他服务即可保持可用。使用 AWS 控制台、命令行界面或您选择的 SDK 和三个简单的命令，在几分钟内即可开始使用 SQS。&lt;/p>
+&lt;/blockquote>
+&lt;h1 id="什么是指数退避">什么是指数退避？&lt;/h1>
+&lt;p>不过有一项功能 SQS 并没有原生实现，那就是“指数退避”。指数退避是指在消息处理失败时，消息队列会发送消息，直到消息处理成功或者超时。而针对每条消息，每次重试的间隔时间是指数级上升的，比如第一次重试 3 秒，第二次重试 9 秒，第三次重试 27 秒等等，以此类推。这个功能在系统设计中属于常见功能。&lt;/p>
+&lt;p>虽然 SQS 没有原生实现，但这我们可以利用 SQS 现有 API 来实现。本文关注使用的，就是 SQS 中 VisibilityTimeout 和 ApproximateReceiveCount 属性以&lt;code>changeMessageVisibility&lt;/code>API。&lt;/p>
+&lt;h1 id="什么是-visibilitytimeout">什么是 VisibilityTimeout&lt;/h1>
+&lt;p>VisibilityTimeout 这个概念源于 SQS 中的一个巧妙设计。&lt;/p>
+&lt;p>当一个消费者接收到 SQS 中的消息后，SQS 并不会立刻将这条消息从队列中删除，因为 SQS 并不知道消费者是否成功接受并处理了消息。如果想要删除这条消息，消费者必须在处理完消息后，手动调用 SQS 的&lt;code>deleteMessage&lt;/code>API 去删除，这样 SQS 才会认为这条消费已经被成功消费，可以从队列中删除了。&lt;/p>
+&lt;p>可问题来了，如果消费者 A 接受到消息后，消息还在队列中，消费者 B 能不能同时接受并处理这条消息呢？如果经常有多个消费者同时处理同一个消息，系统不是就乱套了吗？&lt;/p>
+&lt;p>基于这种考虑，SQS 对每条消息设置了一个 VisibilityTimeout 的属性，这个属性的值代表了时间长度。如果消费者 A 获得了消息，那么这条消息在 VisibilityTimeout 这么长的时间内是不会被其他消费者读取的，只有超过了这个时间长度，其他消费者才可以读取。也正是基于这个设计，大家在配置 VisibilityTimeout 时长时，要比处理这条消息所花的时间稍长一点。&lt;/p>
+&lt;p>&lt;img src="https://blog.boluotou.tech/sqs-visibility-timeout-diagram.png"
+loading="lazy"
+>&lt;/p>
+&lt;p>有了这个属性，还有操作它的&lt;code>changeMessageVisibility&lt;/code>API，我们就可以构思出指数退避的大致方案了。每当消息处理失败时，就重新设置消息的 VisibilityTimeout，并且值是上一次的 N 倍（下面全部都设定为&lt;code>2&lt;/code>）。伪代码如下：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-js" data-lang="js">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">const&lt;/span> &lt;span style="color:#a6e22e">message&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#a6e22e">receiveMessage&lt;/span>();
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">try&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">process&lt;/span>(&lt;span style="color:#a6e22e">message&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>} &lt;span style="color:#66d9ef">catch&lt;/span> (&lt;span style="color:#a6e22e">e&lt;/span>) {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">const&lt;/span> &lt;span style="color:#a6e22e">retriesCount&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#a6e22e">getRetriesCount&lt;/span>(&lt;span style="color:#a6e22e">message&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">changeMessageVisibility&lt;/span>(&lt;span style="color:#a6e22e">message&lt;/span>, &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#f92672">^&lt;/span> &lt;span style="color:#a6e22e">retriesCount&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h1 id="什么是-approximatereceivecount">什么是 ApproximateReceiveCount？&lt;/h1>
+&lt;p>上面伪代码需要从消息中获取重试次数，如何获得呢？我们可以在从 SQS 接受消息时，指定额外的&lt;code>Attributes&lt;/code>字段告知 SQS 返回相关属性。&lt;/p>
+&lt;p>请求&lt;/p>
+&lt;pre tabindex="0">&lt;code>https://sqs.us-east-2.amazonaws.com/xxxxxxxxxxx/MyQueue/
+?Action=ReceiveMessage
+&amp;amp;AttributeName=All
+&lt;/code>&lt;/pre>&lt;p>响应&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-xml" data-lang="xml">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">&amp;lt;ReceiveMessageResponse&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;ReceiveMessageResult&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Message&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;MessageId&amp;gt;&lt;/span>5fea7756-0ea4-451a-a703-a558b933e274&lt;span style="color:#f92672">&amp;lt;/MessageId&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;ReceiptHandle&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> MbZj6wDWli+JvwwJaBV+3dcjk2YW2vA3+STFFljTM8tJJg6HRG6PYSasuWXPJB+Cw
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> Lj1FjgXUv1uSj1gUPAWV66FU/WeR4mq2OKpEGYWbnLmpRCJVAyeMjeU5ZBdtcQ+QE
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> auMZc8ZRv37sIW2iJKq3M9MFx1YvV11A2x/KSbkJ0=
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;/ReceiptHandle&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;MD5OfBody&amp;gt;&lt;/span>fafb00f5732ab283681e124bf8747ed1&lt;span style="color:#f92672">&amp;lt;/MD5OfBody&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Body&amp;gt;&lt;/span>This is a test message&lt;span style="color:#f92672">&amp;lt;/Body&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Attribute&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Name&amp;gt;&lt;/span>SenderId&lt;span style="color:#f92672">&amp;lt;/Name&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Value&amp;gt;&lt;/span>195004372649&lt;span style="color:#f92672">&amp;lt;/Value&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;/Attribute&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Attribute&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Name&amp;gt;&lt;/span>SentTimestamp&lt;span style="color:#f92672">&amp;lt;/Name&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Value&amp;gt;&lt;/span>1238099229000&lt;span style="color:#f92672">&amp;lt;/Value&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;/Attribute&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Attribute&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Name&amp;gt;&lt;/span>ApproximateReceiveCount&lt;span style="color:#f92672">&amp;lt;/Name&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Value&amp;gt;&lt;/span>5&lt;span style="color:#f92672">&amp;lt;/Value&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;/Attribute&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Attribute&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Name&amp;gt;&lt;/span>ApproximateFirstReceiveTimestamp&lt;span style="color:#f92672">&amp;lt;/Name&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;Value&amp;gt;&lt;/span>1250700979248&lt;span style="color:#f92672">&amp;lt;/Value&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;/Attribute&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;/Message&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;/ReceiveMessageResult&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;ResponseMetadata&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;RequestId&amp;gt;&lt;/span>b6633655-283d-45b4-aee4-4e84e0ae6afa&lt;span style="color:#f92672">&amp;lt;/RequestId&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;lt;/ResponseMetadata&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">&amp;lt;/ReceiveMessageResponse&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>返回的响应即含有&lt;code>ApproximateReceiveCount&lt;/code>，它就是伪代码中的&lt;code>retriesCount&lt;/code>。&lt;/p>
+&lt;h1 id="小结">小结&lt;/h1>
+&lt;p>本文基于 SQS 已有的 API，构建出一种简单的指数退避方案。除了已提到的内容，还要注意系统的幂等性，避免多次处理消息失败产生额外的影响。&lt;/p>
+&lt;h1 id="参考资料">参考资料&lt;/h1>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html" target="_blank" rel="noopener"
+>https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ReceiveMessage.html" target="_blank" rel="noopener"
+>https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ReceiveMessage.html&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>AsyncLocalStorage与日志追踪</title><link>https://blog.boluotou.tech/post/20200625-asynclocalstorage-and-logging/</link><pubDate>Thu, 25 Jun 2020 19:26:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20200625-asynclocalstorage-and-logging/</guid><description>&lt;p>最近在思考node.js如何做服务间与服务内部的日志追踪，一个很简单的实现就是在HTTP request header里添加一个字段x-trace-id来标识唯一性，打印日志时添加x-trace-id的值。但如何保存这个状态呢？&lt;/p>
+&lt;p>我看到的一些框架和应用会将traceId作为参数传递到应用的各个函数/方法里，调用&lt;code>logger.info(traceId, &amp;quot;XXX&amp;quot;)&lt;/code>来实现打印traceId的功能。这样的写法并不优雅，但node.js又不像其他语言框架，比如Spring MVC，可以用过ThreadLocal来保存这个状态，那如何保存这个状态呢？其实node.js已经有了这样一个API：&lt;code>AsyncLocalStorage&lt;/code>。&lt;/p>
+&lt;p>&lt;code>AsyncLocalStorage&lt;/code>属于async_hooks模块，node.js v14引入，后被反向移植到v12上。下面用一个express应用来说明它的用法。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-typescript" data-lang="typescript">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> { &lt;span style="color:#a6e22e">AsyncLocalStorage&lt;/span> } &lt;span style="color:#66d9ef">from&lt;/span> &lt;span style="color:#e6db74">&amp;#34;async_hooks&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> &lt;span style="color:#a6e22e">express&lt;/span> &lt;span style="color:#66d9ef">from&lt;/span> &lt;span style="color:#e6db74">&amp;#34;express&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">import&lt;/span> { &lt;span style="color:#a6e22e">v4&lt;/span> &lt;span style="color:#66d9ef">as&lt;/span> &lt;span style="color:#a6e22e">uuid4&lt;/span> } &lt;span style="color:#66d9ef">from&lt;/span> &lt;span style="color:#e6db74">&amp;#34;uuid&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">export&lt;/span> &lt;span style="color:#66d9ef">const&lt;/span> &lt;span style="color:#a6e22e">app&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#a6e22e">express&lt;/span>()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">const&lt;/span> &lt;span style="color:#a6e22e">t&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> &lt;span style="color:#a6e22e">AsyncLocalStorage&lt;/span>&amp;lt;&lt;span style="color:#f92672">string&lt;/span>&amp;gt;()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#a6e22e">app&lt;/span>.&lt;span style="color:#a6e22e">use&lt;/span>((&lt;span style="color:#a6e22e">req&lt;/span>, &lt;span style="color:#a6e22e">_&lt;/span>, &lt;span style="color:#a6e22e">next&lt;/span>) &lt;span style="color:#f92672">=&amp;gt;&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">const&lt;/span> &lt;span style="color:#a6e22e">traceId&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#a6e22e">req&lt;/span>.&lt;span style="color:#a6e22e">header&lt;/span>(&lt;span style="color:#e6db74">&amp;#39;x-trace-id&amp;#39;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">t&lt;/span>.&lt;span style="color:#a6e22e">run&lt;/span>(&lt;span style="color:#a6e22e">traceId&lt;/span> &lt;span style="color:#f92672">??&lt;/span> &lt;span style="color:#a6e22e">uuid4&lt;/span>(), &lt;span style="color:#a6e22e">next&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>})
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#a6e22e">app&lt;/span>.&lt;span style="color:#66d9ef">get&lt;/span>(&lt;span style="color:#e6db74">&amp;#39;/&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">async&lt;/span> &lt;span style="color:#66d9ef">function&lt;/span> (&lt;span style="color:#a6e22e">_&lt;/span>, &lt;span style="color:#a6e22e">res&lt;/span>) {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">console&lt;/span>.&lt;span style="color:#a6e22e">log&lt;/span>(&lt;span style="color:#e6db74">&amp;#39;start&amp;#39;&lt;/span>, &lt;span style="color:#a6e22e">t&lt;/span>.&lt;span style="color:#a6e22e">getStore&lt;/span>())
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// 模拟耗时操作
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#66d9ef">await&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> &lt;span style="color:#a6e22e">Promise&lt;/span>((&lt;span style="color:#a6e22e">resolve&lt;/span>) &lt;span style="color:#f92672">=&amp;gt;&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">setTimeout&lt;/span>(() &lt;span style="color:#f92672">=&amp;gt;&lt;/span> &lt;span style="color:#a6e22e">resolve&lt;/span>(), &lt;span style="color:#ae81ff">100&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> })
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">console&lt;/span>.&lt;span style="color:#a6e22e">log&lt;/span>(&lt;span style="color:#e6db74">&amp;#39;end&amp;#39;&lt;/span>, &lt;span style="color:#a6e22e">t&lt;/span>.&lt;span style="color:#a6e22e">getStore&lt;/span>())
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">res&lt;/span>.&lt;span style="color:#a6e22e">send&lt;/span>(&lt;span style="color:#e6db74">&amp;#39;Hello World!&amp;#39;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>})
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#a6e22e">app&lt;/span>.&lt;span style="color:#a6e22e">listen&lt;/span>(&lt;span style="color:#ae81ff">3000&lt;/span>)
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这里我们写了一个middleware，将HTTP Request Header里的信息保存到AsyncLocalStorage实例中，需要打印日志时使用&lt;code>getStore&lt;/code>方法获取。&lt;/p>
+&lt;p>我们期望的行为是：一个请求进来后，保存并打印它的traceId，之后进行了一些异步操作，操作结束后，我们能通过&lt;code>AsyncLocalStorage&lt;/code>获取到保存的traceId。下面我们就使用ab命令验证一下。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>ab -n &lt;span style="color:#ae81ff">6&lt;/span> -c &lt;span style="color:#ae81ff">2&lt;/span> http://localhost:3000/
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>从日志中我们看出确实是成功地将状态保存了下来。&lt;/p>
+&lt;pre tabindex="0">&lt;code>start 1c9de33e-84a0-4827-ae82-eae9dd8dec60
+end 1c9de33e-84a0-4827-ae82-eae9dd8dec60
+start 9c1f6eab-5c95-4a5f-b2f4-2f1a026684f5
+start 61a32915-5316-4066-bfb0-382c41a2a1aa
+end 9c1f6eab-5c95-4a5f-b2f4-2f1a026684f5
+end 61a32915-5316-4066-bfb0-382c41a2a1aa
+start bb1cb174-0f42-4dc6-9eab-85ccaef9d08c
+start 3ef04aba-dc0c-4c02-aebf-850dbf8c2e31
+end bb1cb174-0f42-4dc6-9eab-85ccaef9d08c
+end 3ef04aba-dc0c-4c02-aebf-850dbf8c2e31
+start a39d34be-da8a-44f6-b3b4-3eb6eb3501ef
+end a39d34be-da8a-44f6-b3b4-3eb6eb3501ef
+&lt;/code>&lt;/pre>&lt;p>这样的写法比起将logger作为参数在各个函数间传递的做法，可读性、可维护性更强，对业务代码的侵入也更低。&lt;/p>
+&lt;p>以上是服务内日志追踪的办法。&lt;/p>
+&lt;p>那如何做服务与服务之间的追踪呢？其实也很简单，将traceId注入到http-client的header中，或者更进一步，重写require函数，调用http/https模块时，将traceId注入。这里就不详细展开。&lt;/p></description></item><item><title>2019年回顾</title><link>https://blog.boluotou.tech/post/20200101-2019-review/</link><pubDate>Fri, 03 Jan 2020 19:26:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20200101-2019-review/</guid><description>&lt;p>2019年，虽然有很多不满意，但总的基调是好的。&lt;/p>
+&lt;p>学习了诸多技术，包括TypeScript、Cocos、Haskell、OS、Akka和Vue。&lt;/p>
+&lt;p>Cocos就是个天坑，写这个，幸好从项目上下来了。另一位同事就没那么好运气了，直到现在还在写。&lt;/p>
+&lt;p>Vue作为后端开发的前端入门框架还是不错的，简单粗暴，出活快，但不够优雅。写前端实在不能称得上是什么有趣的事，光是调CSS一项就足够我崩溃了。花了那么多时间，就只为完成一个小小的样式，感觉并没有学到多少。写完Vue后，坚定了我不搞前端的决心。&lt;/p>
+&lt;p>TypeScript是在开发Cocos中学习的语言，我简直爱死它了。强大的类型系统，模板元编程，工程友好，完美地符合我的要求。当然，如果不是用开发Cocos就更好了。在其他项目上也见识了有人用不用strict模式，any满天飞，看得我简直想打人了。&lt;/p>
+&lt;p>Haskell学了一点，还没到Monad，但足以体会到其类型系统的强大，Scala相比之下感觉像个残次品。&lt;/p>
+&lt;p>补了一点OS的知识。&lt;/p>
+&lt;p>Akka是年末这几天才开始接触的，主要是新项目要用到。感觉Actor的理解真的很先进，但使用起来也很复杂，还不是很明白，新年继续学习。&lt;/p>
+&lt;p>工作上顺利成为正式员工。这一年在四个项目上待过，现在回头一看这数量还真不少。&lt;/p>
+&lt;p>现在回头看第一个项目还是比较简单的。在某种程度上帮助自己很平滑地适应了职场生活，是个好的开始。因为项目小，学了不少技术栈，扩展了视野，也锻炼了ops技能，总体而言，是个好的开始。后来在武汉过的也不错。年末时，抓住机会，成功进入目前的组，开始搞akka/reactor。&lt;/p>
+&lt;p>生活上，终于走上正轨了，Nice！&lt;/p>
+&lt;p>掌声送给自己，过去一年确实不容易。新年计划什么也没有，因为去年的计划根本就没看。&lt;/p></description></item><item><title>mini-parser小轮子</title><link>https://blog.boluotou.tech/post/20191106-mini-parser/</link><pubDate>Wed, 06 Nov 2019 18:00:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20191106-mini-parser/</guid><description>&lt;p>&lt;a class="link" href="https://github.com/gcnyin/compiler/blob/master/mini-parser/index.ts" target="_blank" rel="noopener"
+>代码链接&lt;/a>&lt;/p>
+&lt;p>demo如下，定义好rule后进行parse。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-javascript" data-lang="javascript">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">const&lt;/span> &lt;span style="color:#a6e22e">rule&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#a6e22e">AndRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;hello&amp;#34;&lt;/span>, &lt;span style="color:#e6db74">&amp;#34;HELLO_RULE&amp;#34;&lt;/span>),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">OrRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> [&lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;, &amp;#34;&lt;/span>), &lt;span style="color:#a6e22e">TimesRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#ae81ff">3&lt;/span>, &lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34; &amp;#34;&lt;/span>, &lt;span style="color:#e6db74">&amp;#34;SPACE&amp;#34;&lt;/span>), &lt;span style="color:#e6db74">&amp;#34;TIMES&amp;#34;&lt;/span>)],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;#34;NO_NAME&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;world&amp;#34;&lt;/span>, &lt;span style="color:#e6db74">&amp;#34;WORLD&amp;#34;&lt;/span>),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">OneOrMoreRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;!&amp;#34;&lt;/span>), &lt;span style="color:#e6db74">&amp;#34;SAMPLE&amp;#34;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;#34;HELLO_WORLD&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#a6e22e">console&lt;/span>.&lt;span style="color:#a6e22e">log&lt;/span>(&lt;span style="color:#a6e22e">JSON&lt;/span>.&lt;span style="color:#a6e22e">stringify&lt;/span>(&lt;span style="color:#a6e22e">rule&lt;/span>.&lt;span style="color:#a6e22e">accept&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;hello world!!!&amp;#34;&lt;/span>)));
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>结果为：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-json" data-lang="json">&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;contain&amp;#34;&lt;/span>: &lt;span style="color:#66d9ef">true&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;group&amp;#34;&lt;/span>: {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;groups&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;hello&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;HELLO_RULE&amp;#34;&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;groups&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;groups&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34; &amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;SPACE&amp;#34;&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34; &amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;SPACE&amp;#34;&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34; &amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;SPACE&amp;#34;&lt;/span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;TIMES&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;NO_NAME&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;world&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;WORLD&amp;#34;&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;groups&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;!&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#66d9ef">null&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;!&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#66d9ef">null&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;!&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#66d9ef">null&lt;/span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;SAMPLE&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;HELLO_WORLD&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>当然，这离真正可用还有很远：&lt;/p>
+&lt;p>&lt;img src="https://blog.boluotou.tech/honghongjiedejiaodao.jpg"
+loading="lazy"
+alt="红红姐的教导"
+>&lt;/p></description></item><item><title>JVM if&lt;cond>指令笔记</title><link>https://blog.boluotou.tech/post/20190913-jvm-ifcond/</link><pubDate>Fri, 13 Sep 2019 12:35:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20190913-jvm-ifcond/</guid><description>&lt;pre tabindex="0">&lt;code>format: if&amp;lt;cond&amp;gt; branchByte1 branchByte2
+&lt;/code>&lt;/pre>&lt;p>从栈中弹出一个值，和0进行比较，根据指令的不同，有不同的比较方法得出一个值，如果为假，则顺序执行后面的指令。那为真的呢？：&lt;/p>
+&lt;p>branchByte1 branchByte2 都是 0x00 - 0xFF 之间的一个 unsigned 值，可以用他俩算出来offset作为true branch的入口，公式为：&lt;/p>
+&lt;pre tabindex="0">&lt;code>(branchbyte1 &amp;lt;&amp;lt; 8) | branchbyte2
+&lt;/code>&lt;/pre>&lt;p>例子：&lt;/p>
+&lt;pre tabindex="0">&lt;code>116: bipush 1
+118: ifeq 132
+121: getstatic #12 // Field java/lang/System.out:Ljava/io/PrintStream;
+124: bipush 1
+126: invokevirtual #28 // Method java/io/PrintStream.println:(Z)V
+129: goto 140
+132: getstatic #12 // Field java/lang/System.out:Ljava/io/PrintStream;
+135: bipush 0
+&lt;/code>&lt;/pre>&lt;p>行中ifeq 132的二进制表示为99 00 0E。99代表该指令，00和0E代表两个操作数。&lt;/p>
+&lt;p>计算偏移量：&lt;code>(0x00 &amp;lt;&amp;lt; 8) | 0x0E&lt;/code> 得 14&lt;/p>
+&lt;p>就是说ifeq开头为118，加上14个偏移量为132，所以132是 true branch 的入口。&lt;/p>
+&lt;p>问题：&lt;/p>
+&lt;p>一、为什么需要两个操作数呢？&lt;/p>
+&lt;p>（一）通过观察 java 编译后的 class 文件，我发现 branchByte1 都是 0x00，完全没有必要为这样一个固定的值设计一个位置呀。&lt;/p>
+&lt;p>自答：如果 true branch 非常长（true branch 里的指令长度超过了255，那么 branchByte1 是会增长的。&lt;/p>
+&lt;p>（二）&lt;code>(branchbyte1 &amp;lt;&amp;lt; 8) | branchbyte2&lt;/code>的结果还是8位，难道不可以用一个 byte 来表示，为什么需要用两个 byte 计算后得到结果呢？&lt;/p>
+&lt;p>自答：如上所述，需要两个来处理 condition 很长的情况。&lt;/p></description></item><item><title>slisp：一门简单的JVM上的Lisp方言</title><link>https://blog.boluotou.tech/post/20190101-slisp/</link><pubDate>Tue, 01 Jan 2019 21:00:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20190101-slisp/</guid><description>&lt;p>之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶段性总结。&lt;/p>
+&lt;h2 id="一前言">一、前言&lt;/h2>
+&lt;p>之前写过几个解释器，但还没写过编译器。刚好看到知乎Belleve给出的一幅学习路线图，于是决定实现一个lisp方言的编译器。&lt;/p>
+&lt;p>之所以选择JVM而不是X86作为目标平台，一是JVM平常用的多一些，可以互相印证、互相补充；二是文档和社区资源丰富友好，开发体验较好。&lt;/p>
+&lt;p>项目地址：https://github.com/gcnyin/slisp&lt;/p>
+&lt;p>截止最新的commit 77f126d4，实现的功能有：&lt;/p>
+&lt;ul>
+&lt;li>定义变量&lt;/li>
+&lt;li>支持字符串、整数和布尔类型&lt;/li>
+&lt;li>打印以上三种预置类型的值&lt;/li>
+&lt;li>四则运算&lt;/li>
+&lt;li>条件判断&lt;/li>
+&lt;/ul>
+&lt;h2 id="二编译和运行">二、编译和运行&lt;/h2>
+&lt;p>来一段具体的Slisp程序：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-lisp" data-lang="lisp">&lt;span style="display:flex;">&lt;span>(define a (&lt;span style="color:#a6e22e">+&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#ae81ff">3&lt;/span> &lt;span style="color:#ae81ff">4&lt;/span>))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println a)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(define b (&lt;span style="color:#a6e22e">+&lt;/span> a a))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println b)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(define a (&lt;span style="color:#a6e22e">+&lt;/span> b b))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println a)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println (&lt;span style="color:#a6e22e">+&lt;/span> (&lt;span style="color:#a6e22e">+&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (&lt;span style="color:#a6e22e">-&lt;/span> &lt;span style="color:#ae81ff">6&lt;/span> &lt;span style="color:#ae81ff">4&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (&lt;span style="color:#a6e22e">*&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (&lt;span style="color:#a6e22e">/&lt;/span> &lt;span style="color:#ae81ff">4&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>)))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println &lt;span style="color:#e6db74">&amp;#34;Hello Slisp!&amp;#34;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(define c &lt;span style="color:#e6db74">&amp;#34;Hello world!&amp;#34;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println c)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println true)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println false)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(define d true)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println d)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(&lt;span style="color:#66d9ef">if&lt;/span> true (println true) (println false))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(&lt;span style="color:#66d9ef">if&lt;/span> (== &lt;span style="color:#ae81ff">1&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>) (println &lt;span style="color:#e6db74">&amp;#34;1 == 1&amp;#34;&lt;/span>) (println &lt;span style="color:#e6db74">&amp;#34;1 != 1&amp;#34;&lt;/span>))
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>以上程序出自本项目/Slisp/Hello.slisp。&lt;/p>
+&lt;p>想要运行必须先打包编译器：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>./gradlew clean build
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>得到了build/libs/slisp-0.1.0.jar，之后在命令行编译源代码：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>java -jar build/libs/slisp-0.1.0.jar Slisp/Hello.slisp
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>即可生成Hello.class文件，java Hello运行该文件，输出为：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#ae81ff">20&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#ae81ff">10&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Hello Slisp!
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Hello world!
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>true
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>false
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>true
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>true
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="三编译器组成">三、编译器组成&lt;/h2>
+&lt;p>这个编译器由三部分组成，一是前端部分，二是构建抽象语法树，三是递归下降生成字节码。&lt;/p>
+&lt;p>前端部分使用了Antlr来构建。Antlr是一个流行的parser generator，可以根据给定的文法，生成相应的parser。因为Slisp本身采用了lisp系的语法，并不复杂，所以很容易写出文法供Antlr使用。&lt;/p>
+&lt;p>构建抽象语法树使用了visitor模式。由于Antlr本身返回的结果已经是一棵树，所以这部分的工作是，根据每个节点不同的形态创建相应的类和实例。&lt;/p>
+&lt;p>这里有一些实现上的细节可以优化，比如针对四则运算，可以将这些运算全部用一个类来表示，只更改其中的一个字段以示区别。还有一点是，如果打算只使用一个visitor，那么每个节点类都需要继承同一个接口或父类。&lt;/p>
+&lt;p>还有，实现了一点简单的类型推导。传统的lisp方言大多是动态语言，不过Slisp是静态的，而且可以在定义变量时推导出变量的类型，不需要开发者手动声明变量的类型。(define a 123)、(define b &amp;ldquo;Hello&amp;rdquo;)和(define c true)可以由字面值推导出类型，而(define d (+ 1 (- 2 3))也可以推导出表达式(+ 1 (- 2 3))的类型并以此确定d的类型。&lt;/p>
+&lt;p>生成字节码部分采用了递归下降来生成。比如对(+ (+ 1 1) (- 6 4) (* 2 2) (/ 4 2))，生成了：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span> 44: bipush &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 46: bipush &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 48: iadd
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 49: bipush &lt;span style="color:#ae81ff">6&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 51: bipush &lt;span style="color:#ae81ff">4&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 53: isub
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 54: iadd
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 55: bipush &lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 57: bipush &lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 59: imul
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 60: iadd
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 61: bipush &lt;span style="color:#ae81ff">4&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 63: bipush &lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 65: idiv
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 66: iadd
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这段代码是Hello.class文件中的一部分，使用OpenJDK中的javap反汇编器生成。&lt;/p>
+&lt;p>(+ 1 1)对应44、46和48，先将两个1压入栈中，然后相加，将之前的两个人从栈中弹出，然后将结果压入栈顶，继续执行(- 6 4)。&lt;/p>
+&lt;p>这里需要注意的是，并不是说执行完这四个运算(+ 1 1) (- 6 4) (* 2 2) (/ 4 2)，然后再计算它们的和。而是在计算完(+ 1 1)和(- 6 4)之后（结果为2和2），立即计算了(+ 2 2)（得到4），然后计算(* 2 2)（得到4），再计算(+ 4 4)，以此类推。过程如下所示：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">1&lt;/span> 1&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>- &lt;span style="color:#ae81ff">6&lt;/span> 4&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#f92672">(&lt;/span>- &lt;span style="color:#ae81ff">6&lt;/span> 4&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">4&lt;/span> &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">4&lt;/span> &lt;span style="color:#ae81ff">4&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">8&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">8&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>10&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>为了契合这样的字节码运算方式，后端在创建抽象语法树的时候需要注意“左结合与右结合”的问题。这里采用了右结合的方式，大致结构如下所示：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#f92672">(&lt;/span>- &lt;span style="color:#ae81ff">6&lt;/span> 4&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">1&lt;/span> 1&lt;span style="color:#f92672">))))&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这样从底层开始生成字节码，每生成一层，就向上传递，继续生成上层节点的字节码。&lt;/p>
+&lt;p>实际开发中使用了ASM库来辅助生成字节码，只需要手动拼接好类似于bipush 1这样的文本传给ASM中合适的类和方法，最后调用generateBytecode这样的方法即可。&lt;/p>
+&lt;p>虽然ASM库很方便，但想要生成符合语义的字节码，开发者仍需要阅读JVM规范。JVM规范中定义了各字节码的名称与语义，对照着网络上的众多示例还是很容易理解的。&lt;/p>
+&lt;h2 id="四字节码简介">四、字节码简介&lt;/h2>
+&lt;p>bipush是指将一个类型为byte扩充为int，然后压到栈上。&lt;/p>
+&lt;p>iadd是将栈最上面的两个int弹出，然后计算它们的和，将结果压入栈顶。imul、isub和idiv都类似于iadd，不同之处在于将运算符变为了*、-和/。&lt;/p>
+&lt;p>istore将int保存在局部变量中。&lt;/p>
+&lt;p>iload从局部变量中取出保存在其中的值。&lt;/p>
+&lt;p>astore是将对一个Ojbect的引用保存在局部变量中。&lt;/p>
+&lt;p>alocal是将保存在局部变量中的引用压入栈顶。&lt;/p>
+&lt;p>ifeq是将栈顶的值与0进行比较，如果相等，进入true branch，否则进行false branch。该指令还会指定一个数字作为false branch入口的地址。&lt;/p>
+&lt;p>if_icmpne是比较栈上的两个类型为int的值，如果不相等，进入true branch，否则进入false branch。&lt;/p>
+&lt;p>值得注意的是，诸如if这样的指令并不是单个存在，它们更多的像是一个家庭，比如比较两个int会有许多相似的指令，从JVM规范中抄录一段：&lt;/p>
+&lt;pre tabindex="0">&lt;code>• if_icmpeq succeeds if and only if value1 = value2
+• if_icmpne succeeds if and only if value1 ≠ value2
+• if_icmplt succeeds if and only if value1 &amp;lt; value2
+• if_icmple succeeds if and only if value1 ≤ value2
+• if_icmpgt succeeds if and only if value1 &amp;gt; value2
+• if_icmpge succeeds if and only if value1 ≥ value2
+&lt;/code>&lt;/pre>&lt;p>可以看到if_icmpne只是用来比较两个数相等时的情况，还有其它指令用于比较不等、大于、小于、相等时的情况。像这样相似而略有区别的指令，JVM规范大多将它们的文档合并在一起，并起名为if_icmp&lt;!-- raw HTML omitted -->，这里的cond代表每个指令独特的部分。&lt;/p></description></item><item><title>2018年回顾</title><link>https://blog.boluotou.tech/post/20190101-2018-review/</link><pubDate>Tue, 01 Jan 2019 08:00:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20190101-2018-review/</guid><description>&lt;p>过年前拿到了offer，详见&lt;a class="link" href="https://www.zhihu.com/question/26421707/answer/317693010" target="_blank" rel="noopener"
+>知乎&lt;/a>。&lt;/p>
+&lt;p>舍友们一起出去旅游，去了华哥他老家还有重庆。&lt;/p>
+&lt;p>毕业前的几个月，一直一个人窝在北郊的屋子里，长胖了很多。&lt;/p>
+&lt;p>工作培训压力很大，没有食欲，还导致了胃酸，睡不好。&lt;/p>
+&lt;p>年底分手了。&lt;/p></description></item><item><title>Arcee：又一个Parser Generator轮子</title><link>https://blog.boluotou.tech/post/20180902-arcee/</link><pubDate>Sun, 02 Sep 2018 12:35:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20180902-arcee/</guid><description>&lt;p>项目地址：https://github.com/gcnyin/arcee&lt;/p>
+&lt;p>为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有相应的bind吗？人类为什么又要再做一遍已经成熟了的东西呢？&lt;/p>
+&lt;p>答案是不爽！&lt;/p>
+&lt;p>之前刷 EOPL ，想用 Python 改写其中的玩具语言，重写了三四个后，感觉很别扭。教材里自带了一个parser，所以不用考虑解释器前端的东西，但我用Python改写时，由于没有可口的前端，写起来很不爽，每次写完后端，都只能自己用 Python 手敲一遍AST，真的很麻烦，所以我就萌生了自己写一个 parser generator 的想法。&lt;/p>
+&lt;p>所以，就有 Arcee 。&lt;/p>
+&lt;p>使用方法：&lt;/p>
+&lt;p>Install&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>$ pip install Arcee
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>Example&lt;/p>
+&lt;p>首先创建grammar文件:&lt;/p>
+&lt;pre tabindex="0">&lt;code>KEYWORDS : let, if, zero, -
+NUMBER : \d+(\.\d*)?
+ASSIGN : =
+SUBTRACTION : -
+RIGHT_BRACKET : (
+COLON : ,
+LETF_BRACKET : )
+ID : [A-Za-z]+
+SKIP : [ \\t]+
+program : expression ;
+expression : zeroexp
+| diffexp
+| ifexp
+| varexp
+| letexp
+| constexp
+;
+constexp : $NUMBER ;
+diffexp : &amp;#39;-&amp;#39; &amp;#39;(&amp;#39; expression &amp;#39;,&amp;#39; expression &amp;#39;)&amp;#39; ;
+zeroexp : &amp;#39;zero&amp;#39; &amp;#39;(&amp;#39; expression &amp;#39;)&amp;#39; ;
+ifexp : &amp;#39;if&amp;#39; expression &amp;#39;then&amp;#39; expression &amp;#39;else&amp;#39; expression ;
+varexp : $ID ;
+letexp : &amp;#39;let&amp;#39; $ID &amp;#39;=&amp;#39; expression &amp;#39;in&amp;#39; expression ;
+&lt;/code>&lt;/pre>&lt;p>在命令行里执行：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>$ arcee grammar &amp;gt; result.py
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>result.py has three parts:&lt;/p>
+&lt;ol>
+&lt;li>Token&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-python" data-lang="python">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">from&lt;/span> collections &lt;span style="color:#f92672">import&lt;/span> namedtuple
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Token &lt;span style="color:#f92672">=&lt;/span> namedtuple(&lt;span style="color:#e6db74">&amp;#39;Token&amp;#39;&lt;/span>, [&lt;span style="color:#e6db74">&amp;#39;type&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;value&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;line&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;column&amp;#39;&lt;/span>])
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Program &lt;span style="color:#f92672">=&lt;/span> namedtuple(&lt;span style="color:#e6db74">&amp;#39;Program&amp;#39;&lt;/span>, [&lt;span style="color:#e6db74">&amp;#39;expression&amp;#39;&lt;/span>])
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># ...&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ol start="2">
+&lt;li>Lexer&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-python" data-lang="python">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">import&lt;/span> re
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">tokenize&lt;/span>(code):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span> &lt;span style="color:#75715e"># ...&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ol start="3">
+&lt;li>Parser&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-python" data-lang="python">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">Parser&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> __init__(self, token_list):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># ... &lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_expression&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> xxx:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>parse_constexp()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">elif&lt;/span> yyy:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>parse_diffexp()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">#...&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_constexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_diffexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_zeroexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_ifexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_varexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_letexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>You can parse input such &lt;span style="color:#66d9ef">as&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>input &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#39;&amp;#39;&amp;#39;let a = 0 in if zero(a) then -(a, 1) else -(a, 2)&amp;#39;&amp;#39;&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>tokens &lt;span style="color:#f92672">=&lt;/span> list(tokenize(input))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>parser &lt;span style="color:#f92672">=&lt;/span> Parser(tokens)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>parser&lt;span style="color:#f92672">.&lt;/span>parse_program()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>result &lt;span style="color:#f92672">is&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>result &lt;span style="color:#f92672">=&lt;/span> Program(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Letexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ID&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;ID&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;a&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">4&lt;/span>),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression1&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Constexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> NUMBER&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;NUMBER&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;0&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">8&lt;/span>))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression2&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Ifexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression1&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Zeroexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Varexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ID&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;ID&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;a&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">21&lt;/span>))))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression2&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Diffexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression1&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Varexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ID&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;ID&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;a&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">31&lt;/span>))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression2&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Constexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> NUMBER&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;NUMBER&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;1&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">34&lt;/span>))))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression3&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Diffexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression1&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Varexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ID&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;ID&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;a&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">44&lt;/span>))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression2&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Constexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> NUMBER&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;NUMBER&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;2&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">47&lt;/span>))))))))))
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这样就获得了AST。&lt;/p>
+&lt;p>这个轮子目前还有一点小问题，不过自己用的话还是没问题。由于工作缘故，估计是要去学 JavaScript 了，这个东西估计不会再更新了（也许哪天还会的。。。），到时估计就是重写一个 npm 包吧，这个再说。&lt;/p></description></item></channel></rss>

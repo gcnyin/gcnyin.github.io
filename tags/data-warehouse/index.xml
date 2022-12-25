@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>data warehouse on 菠萝头</title><link>https://blog.boluotou.tech/tags/data-warehouse/</link><description>Recent content in data warehouse on 菠萝头</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 07 Aug 2022 21:18:13 +0800</lastBuildDate><atom:link href="https://blog.boluotou.tech/tags/data-warehouse/index.xml" rel="self" type="application/rss+xml"/><item><title>最近搭的一套离线数仓架构</title><link>https://blog.boluotou.tech/post/20220807-offline-data-warehouse/</link><pubDate>Sun, 07 Aug 2022 21:18:13 +0800</pubDate><guid>https://blog.boluotou.tech/post/20220807-offline-data-warehouse/</guid><description>&lt;p>最近在搭公司的离线数仓，整理出了一批很实用的组件，在这里分享下。&lt;/p>
+&lt;ul>
+&lt;li>spark-sql&lt;/li>
+&lt;li>seatunnel&lt;/li>
+&lt;li>k8s&lt;/li>
+&lt;li>clickhouse&lt;/li>
+&lt;li>hive metastore&lt;/li>
+&lt;li>dolphin-scheduler&lt;/li>
+&lt;/ul>
+&lt;p>使用seatunnel+spark将数据从业务数据库导入clickhouse中，使用dolphin-scheduler调度clickhouse SQL生产dw层和ads层数据，最后再通过seatunnel将ads层数据写回业务系统数据库。hive metastore存储spark sql中的表信息。整个系统搭在k8s上，每个组件基本都有helm charts或者operator，极大地减少了部署难度。&lt;/p></description></item></channel></rss>

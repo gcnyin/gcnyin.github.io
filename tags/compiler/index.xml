@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>compiler on 菠萝头</title><link>https://blog.boluotou.tech/tags/compiler/</link><description>Recent content in compiler on 菠萝头</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Wed, 06 Nov 2019 18:00:00 +0800</lastBuildDate><atom:link href="https://blog.boluotou.tech/tags/compiler/index.xml" rel="self" type="application/rss+xml"/><item><title>mini-parser小轮子</title><link>https://blog.boluotou.tech/post/20191106-mini-parser/</link><pubDate>Wed, 06 Nov 2019 18:00:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20191106-mini-parser/</guid><description>&lt;p>&lt;a class="link" href="https://github.com/gcnyin/compiler/blob/master/mini-parser/index.ts" target="_blank" rel="noopener"
+>代码链接&lt;/a>&lt;/p>
+&lt;p>demo如下，定义好rule后进行parse。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-javascript" data-lang="javascript">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">const&lt;/span> &lt;span style="color:#a6e22e">rule&lt;/span> &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#a6e22e">AndRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;hello&amp;#34;&lt;/span>, &lt;span style="color:#e6db74">&amp;#34;HELLO_RULE&amp;#34;&lt;/span>),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">OrRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> [&lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;, &amp;#34;&lt;/span>), &lt;span style="color:#a6e22e">TimesRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#ae81ff">3&lt;/span>, &lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34; &amp;#34;&lt;/span>, &lt;span style="color:#e6db74">&amp;#34;SPACE&amp;#34;&lt;/span>), &lt;span style="color:#e6db74">&amp;#34;TIMES&amp;#34;&lt;/span>)],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;#34;NO_NAME&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;world&amp;#34;&lt;/span>, &lt;span style="color:#e6db74">&amp;#34;WORLD&amp;#34;&lt;/span>),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">OneOrMoreRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#a6e22e">TextRule&lt;/span>.&lt;span style="color:#66d9ef">of&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;!&amp;#34;&lt;/span>), &lt;span style="color:#e6db74">&amp;#34;SAMPLE&amp;#34;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;#34;HELLO_WORLD&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#a6e22e">console&lt;/span>.&lt;span style="color:#a6e22e">log&lt;/span>(&lt;span style="color:#a6e22e">JSON&lt;/span>.&lt;span style="color:#a6e22e">stringify&lt;/span>(&lt;span style="color:#a6e22e">rule&lt;/span>.&lt;span style="color:#a6e22e">accept&lt;/span>(&lt;span style="color:#e6db74">&amp;#34;hello world!!!&amp;#34;&lt;/span>)));
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>结果为：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-json" data-lang="json">&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;contain&amp;#34;&lt;/span>: &lt;span style="color:#66d9ef">true&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;group&amp;#34;&lt;/span>: {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;groups&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;hello&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;HELLO_RULE&amp;#34;&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;groups&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;groups&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34; &amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;SPACE&amp;#34;&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34; &amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;SPACE&amp;#34;&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34; &amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;SPACE&amp;#34;&lt;/span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;TIMES&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;NO_NAME&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;world&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;WORLD&amp;#34;&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;groups&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;!&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#66d9ef">null&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;!&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#66d9ef">null&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> { &lt;span style="color:#f92672">&amp;#34;text&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;!&amp;#34;&lt;/span>, &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#66d9ef">null&lt;/span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;SAMPLE&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;HELLO_WORLD&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>当然，这离真正可用还有很远：&lt;/p>
+&lt;p>&lt;img src="https://blog.boluotou.tech/honghongjiedejiaodao.jpg"
+loading="lazy"
+alt="红红姐的教导"
+>&lt;/p></description></item><item><title>slisp：一门简单的JVM上的Lisp方言</title><link>https://blog.boluotou.tech/post/20190101-slisp/</link><pubDate>Tue, 01 Jan 2019 21:00:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20190101-slisp/</guid><description>&lt;p>之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶段性总结。&lt;/p>
+&lt;h2 id="一前言">一、前言&lt;/h2>
+&lt;p>之前写过几个解释器，但还没写过编译器。刚好看到知乎Belleve给出的一幅学习路线图，于是决定实现一个lisp方言的编译器。&lt;/p>
+&lt;p>之所以选择JVM而不是X86作为目标平台，一是JVM平常用的多一些，可以互相印证、互相补充；二是文档和社区资源丰富友好，开发体验较好。&lt;/p>
+&lt;p>项目地址：https://github.com/gcnyin/slisp&lt;/p>
+&lt;p>截止最新的commit 77f126d4，实现的功能有：&lt;/p>
+&lt;ul>
+&lt;li>定义变量&lt;/li>
+&lt;li>支持字符串、整数和布尔类型&lt;/li>
+&lt;li>打印以上三种预置类型的值&lt;/li>
+&lt;li>四则运算&lt;/li>
+&lt;li>条件判断&lt;/li>
+&lt;/ul>
+&lt;h2 id="二编译和运行">二、编译和运行&lt;/h2>
+&lt;p>来一段具体的Slisp程序：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-lisp" data-lang="lisp">&lt;span style="display:flex;">&lt;span>(define a (&lt;span style="color:#a6e22e">+&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#ae81ff">3&lt;/span> &lt;span style="color:#ae81ff">4&lt;/span>))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println a)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(define b (&lt;span style="color:#a6e22e">+&lt;/span> a a))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println b)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(define a (&lt;span style="color:#a6e22e">+&lt;/span> b b))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println a)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println (&lt;span style="color:#a6e22e">+&lt;/span> (&lt;span style="color:#a6e22e">+&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (&lt;span style="color:#a6e22e">-&lt;/span> &lt;span style="color:#ae81ff">6&lt;/span> &lt;span style="color:#ae81ff">4&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (&lt;span style="color:#a6e22e">*&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (&lt;span style="color:#a6e22e">/&lt;/span> &lt;span style="color:#ae81ff">4&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>)))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println &lt;span style="color:#e6db74">&amp;#34;Hello Slisp!&amp;#34;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(define c &lt;span style="color:#e6db74">&amp;#34;Hello world!&amp;#34;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println c)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println true)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println false)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(define d true)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(println d)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(&lt;span style="color:#66d9ef">if&lt;/span> true (println true) (println false))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>(&lt;span style="color:#66d9ef">if&lt;/span> (== &lt;span style="color:#ae81ff">1&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>) (println &lt;span style="color:#e6db74">&amp;#34;1 == 1&amp;#34;&lt;/span>) (println &lt;span style="color:#e6db74">&amp;#34;1 != 1&amp;#34;&lt;/span>))
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>以上程序出自本项目/Slisp/Hello.slisp。&lt;/p>
+&lt;p>想要运行必须先打包编译器：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>./gradlew clean build
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>得到了build/libs/slisp-0.1.0.jar，之后在命令行编译源代码：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>java -jar build/libs/slisp-0.1.0.jar Slisp/Hello.slisp
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>即可生成Hello.class文件，java Hello运行该文件，输出为：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#ae81ff">20&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#ae81ff">10&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Hello Slisp!
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Hello world!
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>true
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>false
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>true
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>true
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="三编译器组成">三、编译器组成&lt;/h2>
+&lt;p>这个编译器由三部分组成，一是前端部分，二是构建抽象语法树，三是递归下降生成字节码。&lt;/p>
+&lt;p>前端部分使用了Antlr来构建。Antlr是一个流行的parser generator，可以根据给定的文法，生成相应的parser。因为Slisp本身采用了lisp系的语法，并不复杂，所以很容易写出文法供Antlr使用。&lt;/p>
+&lt;p>构建抽象语法树使用了visitor模式。由于Antlr本身返回的结果已经是一棵树，所以这部分的工作是，根据每个节点不同的形态创建相应的类和实例。&lt;/p>
+&lt;p>这里有一些实现上的细节可以优化，比如针对四则运算，可以将这些运算全部用一个类来表示，只更改其中的一个字段以示区别。还有一点是，如果打算只使用一个visitor，那么每个节点类都需要继承同一个接口或父类。&lt;/p>
+&lt;p>还有，实现了一点简单的类型推导。传统的lisp方言大多是动态语言，不过Slisp是静态的，而且可以在定义变量时推导出变量的类型，不需要开发者手动声明变量的类型。(define a 123)、(define b &amp;ldquo;Hello&amp;rdquo;)和(define c true)可以由字面值推导出类型，而(define d (+ 1 (- 2 3))也可以推导出表达式(+ 1 (- 2 3))的类型并以此确定d的类型。&lt;/p>
+&lt;p>生成字节码部分采用了递归下降来生成。比如对(+ (+ 1 1) (- 6 4) (* 2 2) (/ 4 2))，生成了：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span> 44: bipush &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 46: bipush &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 48: iadd
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 49: bipush &lt;span style="color:#ae81ff">6&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 51: bipush &lt;span style="color:#ae81ff">4&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 53: isub
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 54: iadd
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 55: bipush &lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 57: bipush &lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 59: imul
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 60: iadd
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 61: bipush &lt;span style="color:#ae81ff">4&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 63: bipush &lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 65: idiv
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> 66: iadd
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这段代码是Hello.class文件中的一部分，使用OpenJDK中的javap反汇编器生成。&lt;/p>
+&lt;p>(+ 1 1)对应44、46和48，先将两个1压入栈中，然后相加，将之前的两个人从栈中弹出，然后将结果压入栈顶，继续执行(- 6 4)。&lt;/p>
+&lt;p>这里需要注意的是，并不是说执行完这四个运算(+ 1 1) (- 6 4) (* 2 2) (/ 4 2)，然后再计算它们的和。而是在计算完(+ 1 1)和(- 6 4)之后（结果为2和2），立即计算了(+ 2 2)（得到4），然后计算(* 2 2)（得到4），再计算(+ 4 4)，以此类推。过程如下所示：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">1&lt;/span> 1&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>- &lt;span style="color:#ae81ff">6&lt;/span> 4&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#f92672">(&lt;/span>- &lt;span style="color:#ae81ff">6&lt;/span> 4&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">4&lt;/span> &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">4&lt;/span> &lt;span style="color:#ae81ff">4&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">8&lt;/span> &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">8&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>10&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>为了契合这样的字节码运算方式，后端在创建抽象语法树的时候需要注意“左结合与右结合”的问题。这里采用了右结合的方式，大致结构如下所示：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#f92672">(&lt;/span>/ &lt;span style="color:#ae81ff">4&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#f92672">(&lt;/span>* &lt;span style="color:#ae81ff">2&lt;/span> 2&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#f92672">(&lt;/span>- &lt;span style="color:#ae81ff">6&lt;/span> 4&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">(&lt;/span>+ &lt;span style="color:#ae81ff">1&lt;/span> 1&lt;span style="color:#f92672">))))&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这样从底层开始生成字节码，每生成一层，就向上传递，继续生成上层节点的字节码。&lt;/p>
+&lt;p>实际开发中使用了ASM库来辅助生成字节码，只需要手动拼接好类似于bipush 1这样的文本传给ASM中合适的类和方法，最后调用generateBytecode这样的方法即可。&lt;/p>
+&lt;p>虽然ASM库很方便，但想要生成符合语义的字节码，开发者仍需要阅读JVM规范。JVM规范中定义了各字节码的名称与语义，对照着网络上的众多示例还是很容易理解的。&lt;/p>
+&lt;h2 id="四字节码简介">四、字节码简介&lt;/h2>
+&lt;p>bipush是指将一个类型为byte扩充为int，然后压到栈上。&lt;/p>
+&lt;p>iadd是将栈最上面的两个int弹出，然后计算它们的和，将结果压入栈顶。imul、isub和idiv都类似于iadd，不同之处在于将运算符变为了*、-和/。&lt;/p>
+&lt;p>istore将int保存在局部变量中。&lt;/p>
+&lt;p>iload从局部变量中取出保存在其中的值。&lt;/p>
+&lt;p>astore是将对一个Ojbect的引用保存在局部变量中。&lt;/p>
+&lt;p>alocal是将保存在局部变量中的引用压入栈顶。&lt;/p>
+&lt;p>ifeq是将栈顶的值与0进行比较，如果相等，进入true branch，否则进行false branch。该指令还会指定一个数字作为false branch入口的地址。&lt;/p>
+&lt;p>if_icmpne是比较栈上的两个类型为int的值，如果不相等，进入true branch，否则进入false branch。&lt;/p>
+&lt;p>值得注意的是，诸如if这样的指令并不是单个存在，它们更多的像是一个家庭，比如比较两个int会有许多相似的指令，从JVM规范中抄录一段：&lt;/p>
+&lt;pre tabindex="0">&lt;code>• if_icmpeq succeeds if and only if value1 = value2
+• if_icmpne succeeds if and only if value1 ≠ value2
+• if_icmplt succeeds if and only if value1 &amp;lt; value2
+• if_icmple succeeds if and only if value1 ≤ value2
+• if_icmpgt succeeds if and only if value1 &amp;gt; value2
+• if_icmpge succeeds if and only if value1 ≥ value2
+&lt;/code>&lt;/pre>&lt;p>可以看到if_icmpne只是用来比较两个数相等时的情况，还有其它指令用于比较不等、大于、小于、相等时的情况。像这样相似而略有区别的指令，JVM规范大多将它们的文档合并在一起，并起名为if_icmp&lt;!-- raw HTML omitted -->，这里的cond代表每个指令独特的部分。&lt;/p></description></item><item><title>Arcee：又一个Parser Generator轮子</title><link>https://blog.boluotou.tech/post/20180902-arcee/</link><pubDate>Sun, 02 Sep 2018 12:35:00 +0800</pubDate><guid>https://blog.boluotou.tech/post/20180902-arcee/</guid><description>&lt;p>项目地址：https://github.com/gcnyin/arcee&lt;/p>
+&lt;p>为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有相应的bind吗？人类为什么又要再做一遍已经成熟了的东西呢？&lt;/p>
+&lt;p>答案是不爽！&lt;/p>
+&lt;p>之前刷 EOPL ，想用 Python 改写其中的玩具语言，重写了三四个后，感觉很别扭。教材里自带了一个parser，所以不用考虑解释器前端的东西，但我用Python改写时，由于没有可口的前端，写起来很不爽，每次写完后端，都只能自己用 Python 手敲一遍AST，真的很麻烦，所以我就萌生了自己写一个 parser generator 的想法。&lt;/p>
+&lt;p>所以，就有 Arcee 。&lt;/p>
+&lt;p>使用方法：&lt;/p>
+&lt;p>Install&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>$ pip install Arcee
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>Example&lt;/p>
+&lt;p>首先创建grammar文件:&lt;/p>
+&lt;pre tabindex="0">&lt;code>KEYWORDS : let, if, zero, -
+NUMBER : \d+(\.\d*)?
+ASSIGN : =
+SUBTRACTION : -
+RIGHT_BRACKET : (
+COLON : ,
+LETF_BRACKET : )
+ID : [A-Za-z]+
+SKIP : [ \\t]+
+program : expression ;
+expression : zeroexp
+| diffexp
+| ifexp
+| varexp
+| letexp
+| constexp
+;
+constexp : $NUMBER ;
+diffexp : &amp;#39;-&amp;#39; &amp;#39;(&amp;#39; expression &amp;#39;,&amp;#39; expression &amp;#39;)&amp;#39; ;
+zeroexp : &amp;#39;zero&amp;#39; &amp;#39;(&amp;#39; expression &amp;#39;)&amp;#39; ;
+ifexp : &amp;#39;if&amp;#39; expression &amp;#39;then&amp;#39; expression &amp;#39;else&amp;#39; expression ;
+varexp : $ID ;
+letexp : &amp;#39;let&amp;#39; $ID &amp;#39;=&amp;#39; expression &amp;#39;in&amp;#39; expression ;
+&lt;/code>&lt;/pre>&lt;p>在命令行里执行：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>$ arcee grammar &amp;gt; result.py
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>result.py has three parts:&lt;/p>
+&lt;ol>
+&lt;li>Token&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-python" data-lang="python">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">from&lt;/span> collections &lt;span style="color:#f92672">import&lt;/span> namedtuple
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Token &lt;span style="color:#f92672">=&lt;/span> namedtuple(&lt;span style="color:#e6db74">&amp;#39;Token&amp;#39;&lt;/span>, [&lt;span style="color:#e6db74">&amp;#39;type&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;value&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;line&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;column&amp;#39;&lt;/span>])
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>Program &lt;span style="color:#f92672">=&lt;/span> namedtuple(&lt;span style="color:#e6db74">&amp;#39;Program&amp;#39;&lt;/span>, [&lt;span style="color:#e6db74">&amp;#39;expression&amp;#39;&lt;/span>])
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># ...&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ol start="2">
+&lt;li>Lexer&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-python" data-lang="python">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">import&lt;/span> re
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">tokenize&lt;/span>(code):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span> &lt;span style="color:#75715e"># ...&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ol start="3">
+&lt;li>Parser&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-python" data-lang="python">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">Parser&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> __init__(self, token_list):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># ... &lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_expression&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> xxx:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>parse_constexp()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">elif&lt;/span> yyy:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>parse_diffexp()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">#...&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_constexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_diffexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_zeroexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_ifexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_varexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">parse_letexp&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>You can parse input such &lt;span style="color:#66d9ef">as&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>input &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#39;&amp;#39;&amp;#39;let a = 0 in if zero(a) then -(a, 1) else -(a, 2)&amp;#39;&amp;#39;&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>tokens &lt;span style="color:#f92672">=&lt;/span> list(tokenize(input))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>parser &lt;span style="color:#f92672">=&lt;/span> Parser(tokens)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>parser&lt;span style="color:#f92672">.&lt;/span>parse_program()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>result &lt;span style="color:#f92672">is&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>result &lt;span style="color:#f92672">=&lt;/span> Program(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Letexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ID&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;ID&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;a&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">4&lt;/span>),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression1&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Constexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> NUMBER&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;NUMBER&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;0&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">8&lt;/span>))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression2&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Ifexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression1&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Zeroexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Varexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ID&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;ID&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;a&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">21&lt;/span>))))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression2&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Diffexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression1&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Varexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ID&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;ID&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;a&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">31&lt;/span>))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression2&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Constexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> NUMBER&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;NUMBER&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;1&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">34&lt;/span>))))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression3&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Diffexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression1&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Varexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ID&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;ID&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;a&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>, column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">44&lt;/span>))),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> expression2&lt;span style="color:#f92672">=&lt;/span>Expression(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> nonterminal&lt;span style="color:#f92672">=&lt;/span>Constexp(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> NUMBER&lt;span style="color:#f92672">=&lt;/span>Token(type&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;NUMBER&amp;#39;&lt;/span>, value&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;2&amp;#39;&lt;/span>, line&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> column&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">47&lt;/span>))))))))))
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这样就获得了AST。&lt;/p>
+&lt;p>这个轮子目前还有一点小问题，不过自己用的话还是没问题。由于工作缘故，估计是要去学 JavaScript 了，这个东西估计不会再更新了（也许哪天还会的。。。），到时估计就是重写一个 npm 包吧，这个再说。&lt;/p></description></item></channel></rss>

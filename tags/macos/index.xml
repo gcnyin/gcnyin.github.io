@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>macos on 菠萝头</title><link>https://blog.boluotou.tech/tags/macos/</link><description>Recent content in macos on 菠萝头</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Tue, 29 Jun 2021 20:31:06 +0800</lastBuildDate><atom:link href="https://blog.boluotou.tech/tags/macos/index.xml" rel="self" type="application/rss+xml"/><item><title>我的macOS软件清单</title><link>https://blog.boluotou.tech/post/20210629-macos-softwares/</link><pubDate>Tue, 29 Jun 2021 20:31:06 +0800</pubDate><guid>https://blog.boluotou.tech/post/20210629-macos-softwares/</guid><description>&lt;p>工作后一直用MacBook Pro(15款和17款)，除了公司发的，自己也有一台，现在已经完全习惯了在macOS下开发。macOS下的各种工具基本都把玩了一遍，有一些非常顺手，格外喜欢，这里分享给大家。&lt;/p>
+&lt;h1 id="操作系统">操作系统&lt;/h1>
+&lt;p>已经升级到了Big Sur，但发现很多软件有兼容性问题，所以还是推荐大家用Catalina。&lt;/p>
+&lt;ul>
+&lt;li>Catalina&lt;/li>
+&lt;/ul>
+&lt;h1 id="浏览器">浏览器&lt;/h1>
+&lt;p>虽然我很喜欢Firefox，但这些年的发展实在不怎么亮眼。而且Firefox还搞了中国特供版，账号系统和国际版不能兼容，登录时经常不知道到底使用了哪个版本，实在太窝囊了。还是老老实实用Chrome。&lt;/p>
+&lt;ul>
+&lt;li>Chrome&lt;/li>
+&lt;/ul>
+&lt;h1 id="编辑器">编辑器&lt;/h1>
+&lt;p>已经2021年了，编辑器首选vscode。虽然Sublime Text出了3.x，但用着不如vscode顺手。命令行里一般用vim。学过emacs，但不是很熟练。&lt;/p>
+&lt;ul>
+&lt;li>Visual studio code&lt;/li>
+&lt;li>Vim&lt;/li>
+&lt;/ul>
+&lt;h1 id="ide">IDE&lt;/h1>
+&lt;p>不用想，写Java/Scala永远离不开Jetbrains家的Intellij IDEA。&lt;/p>
+&lt;ul>
+&lt;li>Intellij IDEA&lt;/li>
+&lt;/ul>
+&lt;h1 id="容器">容器&lt;/h1>
+&lt;p>经常需要启动一些后端中间件，Docker必须有。&lt;/p>
+&lt;ul>
+&lt;li>docker&lt;/li>
+&lt;/ul>
+&lt;h1 id="终端">终端&lt;/h1>
+&lt;p>只有它了。&lt;/p>
+&lt;ul>
+&lt;li>iterm2&lt;/li>
+&lt;/ul>
+&lt;h1 id="命令行">命令行&lt;/h1>
+&lt;p>我这几年积累了很多命令行工具，每一个都无可替代。&lt;/p>
+&lt;ul>
+&lt;li>ohmyzsh&lt;/li>
+&lt;li>ohmyzsh theme
+&lt;ul>
+&lt;li>powerlevel10k &lt;strong>强烈推荐&lt;/strong>，功能很完备一个主题&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>ohmyzsh plugins
+&lt;ul>
+&lt;li>zsh-autosuggestions 根据历史记录自动推荐命令&lt;/li>
+&lt;li>zsh-syntax-highlighting 命令行语法高亮，再也不用担心用错命令&lt;/li>
+&lt;li>fzf&lt;/li>
+&lt;li>git-open&lt;/li>
+&lt;li>docker&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>fzf: 快速查找文件、进程&lt;/li>
+&lt;li>tmux: 终端复用工具，强烈推荐，搭配这个&lt;a class="link" href="https://github.com/gpakosz/.tmux" target="_blank" rel="noopener"
+>配置&lt;/a>&lt;/li>
+&lt;li>tldr: 总结了各个命令的常见用法&lt;/li>
+&lt;li>nvm: 管理nodejs版本&lt;/li>
+&lt;li>jenv: 管理jdk版本&lt;/li>
+&lt;li>z: 智能目录跳转&lt;/li>
+&lt;li>tig: git客户端&lt;/li>
+&lt;li>tree: 目录树&lt;/li>
+&lt;li>ack: grep替代品&lt;/li>
+&lt;li>mosh: mosh客户端&lt;/li>
+&lt;li>ncdu: 查看磁盘使用情况&lt;/li>
+&lt;li>htop: 查看进程&lt;/li>
+&lt;li>diff-so-fancy: 很好的文本比对工具&lt;/li>
+&lt;/ul>
+&lt;h1 id="字体">字体&lt;/h1>
+&lt;p>更纱黑体作为等宽字体，不仅适配了多国语言，也同时拥有命令行(Term)和等宽(Mono)这两种不同场景的等宽字体。&lt;/p>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://github.com/be5invis/Sarasa-Gothic/" target="_blank" rel="noopener"
+>更纱黑体 Sarasa Gothic&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;h1 id="窗口管理">窗口管理&lt;/h1>
+&lt;p>macOS的原生窗口管理功能很少，必须用其他软件加强。rectangle是一个，hammerspoon自己写配置也是一个，其他的都要付费，不是很感冒。&lt;/p>
+&lt;ul>
+&lt;li>Rectangle&lt;/li>
+&lt;/ul>
+&lt;h1 id="输入法">输入法&lt;/h1>
+&lt;p>我喜欢五笔，所以并没有太多选择。&lt;/p>
+&lt;ul>
+&lt;li>清歌输入法&lt;/li>
+&lt;/ul>
+&lt;h1 id="绘画">绘画&lt;/h1>
+&lt;p>我画的是板绘，可惜windows下流行的板绘软件很多并不支持macOS，最终选择了KDE开源的Krita。&lt;/p>
+&lt;ul>
+&lt;li>Krita&lt;/li>
+&lt;/ul>
+&lt;h1 id="键盘化">键盘化&lt;/h1>
+&lt;p>键盘的效率远高于鼠标，所以能用键盘完成的事情要尽可能用键盘。&lt;/p>
+&lt;ul>
+&lt;li>alfred4&lt;/li>
+&lt;li>hammerspoon（可以参考我的上一篇博文）&lt;/li>
+&lt;/ul>
+&lt;h1 id="总结">总结&lt;/h1>
+&lt;p>这一套配置更侧重于命令行和键盘操作，需要配置的东西也有一些（比如hammerspoon)，但调教好了之后用起来还是很爽的。可惜macOS下好像没什么工具可以很好的操作鼠标，有用过vimac，但发现会提高输入延迟。&lt;/p></description></item><item><title>使用hammerspoon管理macOS窗口</title><link>https://blog.boluotou.tech/post/20210526-use-hammerspoon-to-manage-macos-window/</link><pubDate>Wed, 26 May 2021 19:49:27 +0800</pubDate><guid>https://blog.boluotou.tech/post/20210526-use-hammerspoon-to-manage-macos-window/</guid><description>&lt;p>macOS没有内置窗口管理功能，需要安装第三方软件来实现。常用的免费软件有Spectacle和ShiftIt，这已不再维护。今天将macOS升级到11.3后，发现ShiftIt彻底不能使用了。搜寻后在&lt;a class="link" href="https://github.com/fikovnik/ShiftIt/wiki/The-Hammerspoon-Alternative" target="_blank" rel="noopener"
+>ShiftIt wiki&lt;/a>里找到了替代品&lt;a class="link" href="http://www.hammerspoon.org/" target="_blank" rel="noopener"
+>hammerspoon&lt;/a>。&lt;/p>
+&lt;h1 id="介绍">介绍&lt;/h1>
+&lt;blockquote>
+&lt;p>Hammerspoon 是一款macOS平台的免费开源软件，通过桥接操作系统与 Lua 脚本引擎的方式，让我们可以通过编写 Lua 代码来实现操作应用程序、窗口、鼠标、文本、音频设备、电池、屏幕、剪切板、定位、wifi等。基本囊括了系统的各方面。&lt;/p>
+&lt;/blockquote>
+&lt;h1 id="安装">安装&lt;/h1>
+&lt;pre tabindex="0">&lt;code>brew cask install hammerspoon
+&lt;/code>&lt;/pre>&lt;h1 id="编写脚本">编写脚本&lt;/h1>
+&lt;p>创建&lt;code>.hammerspoon&lt;/code>目录和&lt;code>init.lua&lt;/code>文件。&lt;/p>
+&lt;pre tabindex="0">&lt;code>mkdir ~/.hammerspoon
+cd ~/.hammerspoon
+touch init.lua
+&lt;/code>&lt;/pre>&lt;p>编辑&lt;code>init.lua&lt;/code>，填写以下内容。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-lua" data-lang="lua">&lt;span style="display:flex;">&lt;span>hs.window.animationDuration &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>units &lt;span style="color:#f92672">=&lt;/span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> right50 &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> left50 &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> top50 &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> bot50 &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.50&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> maximum &lt;span style="color:#f92672">=&lt;/span> { x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.00&lt;/span>, w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span>, h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1.00&lt;/span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind({ &lt;span style="color:#e6db74">&amp;#39;ctrl&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;alt&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;cmd&amp;#39;&lt;/span>}, &lt;span style="color:#e6db74">&amp;#39;n&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">local&lt;/span> win &lt;span style="color:#f92672">=&lt;/span> hs.window.focusedWindow()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">-- get the screen where the focused window is displayed, a.k.a. current screen&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">local&lt;/span> screen &lt;span style="color:#f92672">=&lt;/span> win:screen()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">-- compute the unitRect of the focused window relative to the current screen&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">-- and move the window to the next screen setting the same unitRect&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> win:move(win:frame():toUnitRect(screen:frame()), screen:next(), &lt;span style="color:#66d9ef">true&lt;/span>, &lt;span style="color:#ae81ff">0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>mash &lt;span style="color:#f92672">=&lt;/span> { &lt;span style="color:#e6db74">&amp;#39;ctrl&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;alt&amp;#39;&lt;/span>, &lt;span style="color:#e6db74">&amp;#39;cmd&amp;#39;&lt;/span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;right&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.right50, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;left&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.left50, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;up&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.top50, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;down&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.bot50, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hs.hotkey.bind(mash, &lt;span style="color:#e6db74">&amp;#39;m&amp;#39;&lt;/span>, &lt;span style="color:#66d9ef">function&lt;/span>() hs.window.focusedWindow():move(units.maximum, &lt;span style="color:#66d9ef">nil&lt;/span>, &lt;span style="color:#66d9ef">true&lt;/span>) &lt;span style="color:#66d9ef">end&lt;/span>)
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>这个脚本将若干功能绑定到快捷键上，包括&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>n&lt;/code> - 将当前窗口移动到下一个显示器&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>↑&lt;/code> - 将当前窗口移动到屏幕上半边&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>↓&lt;/code> - 将当前窗口移动到屏幕下半边&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>←&lt;/code> - 将当前窗口移动到屏幕右半边&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>→&lt;/code> - 将当前窗口移动到屏幕左半边&lt;/li>
+&lt;li>&lt;code>ctrl&lt;/code>+&lt;code>alt&lt;/code>+&lt;code>cmd&lt;/code>+&lt;code>m&lt;/code> - 将当前窗口最大化&lt;/li>
+&lt;/ul>
+&lt;p>配置好后并不能立即使用，还需要启动Hammerspoon。&lt;/p>
+&lt;h1 id="启动">启动&lt;/h1>
+&lt;p>打开Hammerspoon软件，点击&lt;code>Reload config&lt;/code>，这样就可以愉快地管理窗口了。&lt;/p>
+&lt;h1 id="结论">结论&lt;/h1>
+&lt;p>至此，我们已经实现了窗口管理的基本功能。当然，Hammerspoon的功能远不止此，感兴趣的读者可以去&lt;a class="link" href="http://www.hammerspoon.org/" target="_blank" rel="noopener"
+>Hammerspoon官网&lt;/a>了解。&lt;/p></description></item></channel></rss>
