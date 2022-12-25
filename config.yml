@@ -14,7 +14,13 @@ params:
             src: img/cat2.jpeg
     comments:
         enabled: true
-        provider: utterances
+        provider: disqusjs
+        disqusjs:
+            shortname: gcnyin
+            apiUrl:
+            apiKey: axEXO6tIip7EqeO3wdDoglRjBQgCwgK56jmZvsla1mBt7x9JHA2i5StHnonPvGLp
+            admin:
+            adminLabel:
         utterances:
             repo: gcnyin/gcnyin.github.io
             issueTerm: title
