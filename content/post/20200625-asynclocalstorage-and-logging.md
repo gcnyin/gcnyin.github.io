@@ -1,8 +1,6 @@
 ---
 title: "AsyncLocalStorage与日志追踪"
 date: 2020-06-25T19:26:00+08:00
-tags:
-- nodejs
 ---
 
 最近在思考node.js如何做服务间与服务内部的日志追踪，一个很简单的实现就是在HTTP request header里添加一个字段x-trace-id来标识唯一性，打印日志时添加x-trace-id的值。但如何保存这个状态呢？

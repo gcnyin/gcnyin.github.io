@@ -1,8 +1,6 @@
 ---
 title: "一套充分利用本地机器的日志中心架构"
 date: 2022-08-14T23:09:08+08:00
-tags:
-- logging
 ---
 
 ![logging-architecture](/logging-architecture.png)
