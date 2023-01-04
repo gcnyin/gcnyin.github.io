@@ -7,4 +7,4 @@ menu:
             icon: user
 ---
 
-Scala爱好者。
+充满好奇心的程序员。
