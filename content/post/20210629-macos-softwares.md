@@ -104,6 +104,10 @@ macOS的原生窗口管理功能很少，必须用其他软件加强。rectangle
 - alfred4
 - hammerspoon（可以参考我的上一篇博文）
 
+# 其他工具
+
+- Hidden Bar https://github.com/dwarvesf/hidden. 当menu bar icons太多时可以用它来隐藏不需要的。
+
 # 总结
 
 这一套配置更侧重于命令行和键盘操作，需要配置的东西也有一些（比如hammerspoon)，但调教好了之后用起来还是很爽的。可惜macOS下好像没什么工具可以很好的操作鼠标，有用过vimac，但发现会提高输入延迟。
