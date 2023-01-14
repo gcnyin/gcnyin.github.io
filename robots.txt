@@ -1,2 +1,2 @@
 User-agent: *
-Sitemap: https://blog.boluotou.tech/sitemap.xml
+Sitemap: https://xiangzi.me/sitemap.xml
