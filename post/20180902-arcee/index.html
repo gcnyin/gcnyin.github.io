@@ -1,236 +1,113 @@
-<!doctype html><html lang=en><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>Arcee：又一个Parser Generator轮子 - 箱子的博客</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="箱子"><meta name=description content="项目地址：https://github.com/gcnyin/arcee 为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有"><meta name=keywords content="blog,博客"><meta name=generator content="Hugo 0.110.0 with theme even"><link rel=canonical href=https://xiangzi.me/post/20180902-arcee/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content="Arcee：又一个Parser Generator轮子"><meta property="og:description" content="项目地址：https://github.com/gcnyin/arcee 为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有"><meta property="og:type" content="article"><meta property="og:url" content="https://xiangzi.me/post/20180902-arcee/"><meta property="article:section" content="post"><meta property="article:published_time" content="2018-09-02T12:35:00+08:00"><meta property="article:modified_time" content="2018-09-02T12:35:00+08:00"><meta itemprop=name content="Arcee：又一个Parser Generator轮子"><meta itemprop=description content="项目地址：https://github.com/gcnyin/arcee 为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有"><meta itemprop=datePublished content="2018-09-02T12:35:00+08:00"><meta itemprop=dateModified content="2018-09-02T12:35:00+08:00"><meta itemprop=wordCount content="734"><meta itemprop=keywords content="parser,python,"><meta name=twitter:card content="summary"><meta name=twitter:title content="Arcee：又一个Parser Generator轮子"><meta name=twitter:description content="项目地址：https://github.com/gcnyin/arcee 为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
-<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>Hello, world!</a></div><div class=mobile-navbar-icon><span></span>
-<span></span>
-<span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/page/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>Hello, world!</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/page/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><header class=post-header><h1 class=post-title>Arcee：又一个Parser Generator轮子</h1><div class=post-meta><span class=post-time>2018-09-02</span><div class=post-category><a href=/categories/%E6%8A%80%E6%9C%AF/>技术</a></div></div></header><div class=post-toc id=post-toc><h2 class=post-toc-title>Contents</h2><div class="post-toc-content always-active"><nav id=TableOfContents></nav></div></div><div class=post-content><p>项目地址：https://github.com/gcnyin/arcee</p><p>为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有相应的bind吗？人类为什么又要再做一遍已经成熟了的东西呢？</p><p>答案是不爽！</p><p>之前刷 EOPL ，想用 Python 改写其中的玩具语言，重写了三四个后，感觉很别扭。教材里自带了一个parser，所以不用考虑解释器前端的东西，但我用Python改写时，由于没有可口的前端，写起来很不爽，每次写完后端，都只能自己用 Python 手敲一遍AST，真的很麻烦，所以我就萌生了自己写一个 parser generator 的想法。</p><p>所以，就有 Arcee 。</p><p>使用方法：</p><p>Install</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>$ pip install Arcee
-</span></span></code></pre></td></tr></table></div></div><p>Example</p><p>首先创建grammar文件:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
-</span><span class=lnt>17
-</span><span class=lnt>18
-</span><span class=lnt>19
-</span><span class=lnt>20
-</span><span class=lnt>21
-</span><span class=lnt>22
-</span><span class=lnt>23
-</span><span class=lnt>24
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>KEYWORDS        : let, if, zero, -
-</span></span><span class=line><span class=cl>NUMBER          : \d+(\.\d*)?
-</span></span><span class=line><span class=cl>ASSIGN          : =
-</span></span><span class=line><span class=cl>SUBTRACTION     : -
-</span></span><span class=line><span class=cl>RIGHT_BRACKET   : (
-</span></span><span class=line><span class=cl>COLON           : ,
-</span></span><span class=line><span class=cl>LETF_BRACKET    : )
-</span></span><span class=line><span class=cl>ID              : [A-Za-z]+
-</span></span><span class=line><span class=cl>SKIP            : [ \\t]+
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl>program : expression ;
-</span></span><span class=line><span class=cl>expression : zeroexp
-</span></span><span class=line><span class=cl>    | diffexp
-</span></span><span class=line><span class=cl>    | ifexp
-</span></span><span class=line><span class=cl>    | varexp
-</span></span><span class=line><span class=cl>    | letexp
-</span></span><span class=line><span class=cl>    | constexp
-</span></span><span class=line><span class=cl>    ;
-</span></span><span class=line><span class=cl>constexp : $NUMBER ;
-</span></span><span class=line><span class=cl>diffexp : &#39;-&#39; &#39;(&#39; expression &#39;,&#39; expression &#39;)&#39; ;
-</span></span><span class=line><span class=cl>zeroexp : &#39;zero&#39; &#39;(&#39; expression &#39;)&#39; ;
-</span></span><span class=line><span class=cl>ifexp : &#39;if&#39; expression &#39;then&#39; expression &#39;else&#39; expression ;
-</span></span><span class=line><span class=cl>varexp : $ID ;
-</span></span><span class=line><span class=cl>letexp : &#39;let&#39; $ID &#39;=&#39; expression &#39;in&#39; expression ;
-</span></span></code></pre></td></tr></table></div></div><p>在命令行里执行：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>$ arcee grammar &gt; result.py
-</span></span></code></pre></td></tr></table></div></div><p>result.py has three parts:</p><ol><li>Token</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=kn>from</span> <span class=nn>collections</span> <span class=kn>import</span> <span class=n>namedtuple</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=n>Token</span> <span class=o>=</span> <span class=n>namedtuple</span><span class=p>(</span><span class=s1>&#39;Token&#39;</span><span class=p>,</span> <span class=p>[</span><span class=s1>&#39;type&#39;</span><span class=p>,</span> <span class=s1>&#39;value&#39;</span><span class=p>,</span> <span class=s1>&#39;line&#39;</span><span class=p>,</span> <span class=s1>&#39;column&#39;</span><span class=p>])</span>
-</span></span><span class=line><span class=cl><span class=n>Program</span> <span class=o>=</span> <span class=n>namedtuple</span><span class=p>(</span><span class=s1>&#39;Program&#39;</span><span class=p>,</span> <span class=p>[</span><span class=s1>&#39;expression&#39;</span><span class=p>])</span>
-</span></span><span class=line><span class=cl><span class=c1># ...</span>
-</span></span></code></pre></td></tr></table></div></div><ol start=2><li>Lexer</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=kn>import</span> <span class=nn>re</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=k>def</span> <span class=nf>tokenize</span><span class=p>(</span><span class=n>code</span><span class=p>):</span>
-</span></span><span class=line><span class=cl>    <span class=k>pass</span> <span class=c1># ...</span>
-</span></span></code></pre></td></tr></table></div></div><ol start=3><li>Parser</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
-</span><span class=lnt>17
-</span><span class=lnt>18
-</span><span class=lnt>19
-</span><span class=lnt>20
-</span><span class=lnt>21
-</span><span class=lnt>22
-</span><span class=lnt>23
-</span><span class=lnt>24
-</span><span class=lnt>25
-</span><span class=lnt>26
-</span><span class=lnt>27
-</span><span class=lnt>28
-</span><span class=lnt>29
-</span><span class=lnt>30
-</span><span class=lnt>31
-</span><span class=lnt>32
-</span><span class=lnt>33
-</span><span class=lnt>34
-</span><span class=lnt>35
-</span><span class=lnt>36
-</span><span class=lnt>37
-</span><span class=lnt>38
-</span><span class=lnt>39
-</span><span class=lnt>40
-</span><span class=lnt>41
-</span><span class=lnt>42
-</span><span class=lnt>43
-</span><span class=lnt>44
-</span><span class=lnt>45
-</span><span class=lnt>46
-</span><span class=lnt>47
-</span><span class=lnt>48
-</span><span class=lnt>49
-</span><span class=lnt>50
-</span><span class=lnt>51
-</span><span class=lnt>52
-</span><span class=lnt>53
-</span><span class=lnt>54
-</span><span class=lnt>55
-</span><span class=lnt>56
-</span><span class=lnt>57
-</span><span class=lnt>58
-</span><span class=lnt>59
-</span><span class=lnt>60
-</span><span class=lnt>61
-</span><span class=lnt>62
-</span><span class=lnt>63
-</span><span class=lnt>64
-</span><span class=lnt>65
-</span><span class=lnt>66
-</span><span class=lnt>67
-</span><span class=lnt>68
-</span><span class=lnt>69
-</span><span class=lnt>70
-</span><span class=lnt>71
-</span><span class=lnt>72
-</span><span class=lnt>73
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-python data-lang=python><span class=line><span class=cl><span class=k>class</span> <span class=nc>Parser</span><span class=p>:</span>
-</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>token_list</span><span class=p>):</span>
-</span></span><span class=line><span class=cl>        <span class=k>pass</span>
-</span></span><span class=line><span class=cl>    
-</span></span><span class=line><span class=cl>    <span class=c1># ... </span>
-</span></span><span class=line><span class=cl>        
-</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>parse_expression</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
-</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=n>xxx</span><span class=p>:</span>
-</span></span><span class=line><span class=cl>            <span class=bp>self</span><span class=o>.</span><span class=n>parse_constexp</span><span class=p>()</span>
-</span></span><span class=line><span class=cl>        <span class=k>elif</span> <span class=n>yyy</span><span class=p>:</span>
-</span></span><span class=line><span class=cl>            <span class=bp>self</span><span class=o>.</span><span class=n>parse_diffexp</span><span class=p>()</span>
-</span></span><span class=line><span class=cl>        <span class=c1>#...</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>parse_constexp</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
-</span></span><span class=line><span class=cl>        <span class=k>pass</span>
-</span></span><span class=line><span class=cl>        
-</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>parse_diffexp</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
-</span></span><span class=line><span class=cl>        <span class=k>pass</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>parse_zeroexp</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
-</span></span><span class=line><span class=cl>        <span class=k>pass</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>parse_ifexp</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
-</span></span><span class=line><span class=cl>        <span class=k>pass</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>parse_varexp</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
-</span></span><span class=line><span class=cl>        <span class=k>pass</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl>    <span class=k>def</span> <span class=nf>parse_letexp</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
-</span></span><span class=line><span class=cl>        <span class=k>pass</span>
-</span></span><span class=line><span class=cl><span class=n>You</span> <span class=n>can</span> <span class=n>parse</span> <span class=nb>input</span> <span class=n>such</span> <span class=k>as</span><span class=p>:</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=nb>input</span> <span class=o>=</span> <span class=s1>&#39;&#39;&#39;let a = 0 in if zero(a) then -(a, 1) else -(a, 2)&#39;&#39;&#39;</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=n>tokens</span> <span class=o>=</span> <span class=nb>list</span><span class=p>(</span><span class=n>tokenize</span><span class=p>(</span><span class=nb>input</span><span class=p>))</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=n>parser</span> <span class=o>=</span> <span class=n>Parser</span><span class=p>(</span><span class=n>tokens</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=n>parser</span><span class=o>.</span><span class=n>parse_program</span><span class=p>()</span>
-</span></span><span class=line><span class=cl><span class=n>result</span> <span class=ow>is</span><span class=p>:</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=n>result</span> <span class=o>=</span> <span class=n>Program</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>    <span class=n>expression</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>        <span class=n>nonterminal</span><span class=o>=</span><span class=n>Letexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>            <span class=n>ID</span><span class=o>=</span><span class=n>Token</span><span class=p>(</span><span class=nb>type</span><span class=o>=</span><span class=s1>&#39;ID&#39;</span><span class=p>,</span> <span class=n>value</span><span class=o>=</span><span class=s1>&#39;a&#39;</span><span class=p>,</span> <span class=n>line</span><span class=o>=</span><span class=mi>2</span><span class=p>,</span> <span class=n>column</span><span class=o>=</span><span class=mi>4</span><span class=p>),</span>
-</span></span><span class=line><span class=cl>            <span class=n>expression1</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                <span class=n>nonterminal</span><span class=o>=</span><span class=n>Constexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                    <span class=n>NUMBER</span><span class=o>=</span><span class=n>Token</span><span class=p>(</span><span class=nb>type</span><span class=o>=</span><span class=s1>&#39;NUMBER&#39;</span><span class=p>,</span> <span class=n>value</span><span class=o>=</span><span class=s1>&#39;0&#39;</span><span class=p>,</span> <span class=n>line</span><span class=o>=</span><span class=mi>2</span><span class=p>,</span> <span class=n>column</span><span class=o>=</span><span class=mi>8</span><span class=p>))),</span>
-</span></span><span class=line><span class=cl>            <span class=n>expression2</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                <span class=n>nonterminal</span><span class=o>=</span><span class=n>Ifexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                    <span class=n>expression1</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                        <span class=n>nonterminal</span><span class=o>=</span><span class=n>Zeroexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                            <span class=n>expression</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                <span class=n>nonterminal</span><span class=o>=</span><span class=n>Varexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                    <span class=n>ID</span><span class=o>=</span><span class=n>Token</span><span class=p>(</span><span class=nb>type</span><span class=o>=</span><span class=s1>&#39;ID&#39;</span><span class=p>,</span> <span class=n>value</span><span class=o>=</span><span class=s1>&#39;a&#39;</span><span class=p>,</span> <span class=n>line</span><span class=o>=</span><span class=mi>2</span><span class=p>,</span> <span class=n>column</span><span class=o>=</span><span class=mi>21</span><span class=p>))))),</span>
-</span></span><span class=line><span class=cl>                    <span class=n>expression2</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                        <span class=n>nonterminal</span><span class=o>=</span><span class=n>Diffexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                            <span class=n>expression1</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                <span class=n>nonterminal</span><span class=o>=</span><span class=n>Varexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                    <span class=n>ID</span><span class=o>=</span><span class=n>Token</span><span class=p>(</span><span class=nb>type</span><span class=o>=</span><span class=s1>&#39;ID&#39;</span><span class=p>,</span> <span class=n>value</span><span class=o>=</span><span class=s1>&#39;a&#39;</span><span class=p>,</span> <span class=n>line</span><span class=o>=</span><span class=mi>2</span><span class=p>,</span> <span class=n>column</span><span class=o>=</span><span class=mi>31</span><span class=p>))),</span>
-</span></span><span class=line><span class=cl>                            <span class=n>expression2</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                <span class=n>nonterminal</span><span class=o>=</span><span class=n>Constexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                    <span class=n>NUMBER</span><span class=o>=</span><span class=n>Token</span><span class=p>(</span><span class=nb>type</span><span class=o>=</span><span class=s1>&#39;NUMBER&#39;</span><span class=p>,</span> <span class=n>value</span><span class=o>=</span><span class=s1>&#39;1&#39;</span><span class=p>,</span> <span class=n>line</span><span class=o>=</span><span class=mi>2</span><span class=p>,</span>
-</span></span><span class=line><span class=cl>                                                 <span class=n>column</span><span class=o>=</span><span class=mi>34</span><span class=p>))))),</span>
-</span></span><span class=line><span class=cl>                    <span class=n>expression3</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                        <span class=n>nonterminal</span><span class=o>=</span><span class=n>Diffexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                            <span class=n>expression1</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                <span class=n>nonterminal</span><span class=o>=</span><span class=n>Varexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                    <span class=n>ID</span><span class=o>=</span><span class=n>Token</span><span class=p>(</span><span class=nb>type</span><span class=o>=</span><span class=s1>&#39;ID&#39;</span><span class=p>,</span> <span class=n>value</span><span class=o>=</span><span class=s1>&#39;a&#39;</span><span class=p>,</span> <span class=n>line</span><span class=o>=</span><span class=mi>2</span><span class=p>,</span> <span class=n>column</span><span class=o>=</span><span class=mi>44</span><span class=p>))),</span>
-</span></span><span class=line><span class=cl>                            <span class=n>expression2</span><span class=o>=</span><span class=n>Expression</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                <span class=n>nonterminal</span><span class=o>=</span><span class=n>Constexp</span><span class=p>(</span>
-</span></span><span class=line><span class=cl>                                    <span class=n>NUMBER</span><span class=o>=</span><span class=n>Token</span><span class=p>(</span><span class=nb>type</span><span class=o>=</span><span class=s1>&#39;NUMBER&#39;</span><span class=p>,</span> <span class=n>value</span><span class=o>=</span><span class=s1>&#39;2&#39;</span><span class=p>,</span> <span class=n>line</span><span class=o>=</span><span class=mi>2</span><span class=p>,</span>
-</span></span><span class=line><span class=cl>                                                 <span class=n>column</span><span class=o>=</span><span class=mi>47</span><span class=p>))))))))))</span>
-</span></span></code></pre></td></tr></table></div></div><p>这样就获得了AST。</p><p>这个轮子目前还有一点小问题，不过自己用的话还是没问题。由于工作缘故，估计是要去学 JavaScript 了，这个东西估计不会再更新了（也许哪天还会的。。。），到时估计就是重写一个 npm 包吧，这个再说。</p></div><div class=post-copyright><p class=copyright-item><span class=item-title>Author</span>
-<span class=item-content>箱子</span></p><p class=copyright-item><span class=item-title>LastMod</span>
-<span class=item-content>2018-09-02</span></p></div><footer class=post-footer><div class=post-tags><a href=/tags/parser/>parser</a>
-<a href=/tags/python/>python</a></div><nav class=post-nav><a class=prev href=/post/20190101-2018-review/><i class="iconfont icon-left"></i>
-<span class="prev-text nav-default">2018年回顾</span>
-<span class="prev-text nav-mobile">Prev</span></a></nav></footer></article></div><div id=disqus_thread></div><script type=text/javascript>(function(){if(window.location.hostname==="localhost")return;var t,e=document.createElement("script");e.type="text/javascript",e.async=!0,t="gcnyin",e.src="//"+t+".disqus.com/embed.js",(document.getElementsByTagName("head")[0]||document.getElementsByTagName("body")[0]).appendChild(e)})()</script><noscript>Please enable JavaScript to view the <a href=http://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=https://twitter.com/hezhao_huang class="iconfont icon-twitter" title=twitter></a>
-<a href=https://github.com/gcnyin class="iconfont icon-github" title=github></a>
-<a href=https://xiangzi.me/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a></span>
-<span class=division>|</span>
-<span class=theme-info>Theme -
-<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
-<span class=copyright-year>&copy;
-2018 -
-2023<span class=heart><i class="iconfont icon-heart"></i></span><span>箱子</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
-<script type=text/javascript src=/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js></script></body></html>
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Arcee：又一个Parser Generator轮子 | 箱子的博客</title><meta name=keywords content="parser,python"><meta name=description content="项目地址：https://github.com/gcnyin/arcee 为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有"><meta name=author content><link rel=canonical href=https://xiangzi.me/post/20180902-arcee/><link crossorigin=anonymous href=/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe+FVUFzPh7U=" rel="preload stylesheet" as=style><script defer crossorigin=anonymous src=/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG+9vmJ0cTS+ovo0FeA=" onload=hljs.initHighlightingOnLoad()></script>
+<link rel=icon href=https://xiangzi.me/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://xiangzi.me/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://xiangzi.me/favicon-32x32.png><link rel=apple-touch-icon href=https://xiangzi.me/apple-touch-icon.png><link rel=mask-icon href=https://xiangzi.me/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--hljs-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:title" content="Arcee：又一个Parser Generator轮子"><meta property="og:description" content="项目地址：https://github.com/gcnyin/arcee 为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有"><meta property="og:type" content="article"><meta property="og:url" content="https://xiangzi.me/post/20180902-arcee/"><meta property="article:section" content="post"><meta property="article:published_time" content="2018-09-02T12:35:00+08:00"><meta property="article:modified_time" content="2018-09-02T12:35:00+08:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="Arcee：又一个Parser Generator轮子"><meta name=twitter:description content="项目地址：https://github.com/gcnyin/arcee 为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://xiangzi.me/post/"},{"@type":"ListItem","position":2,"name":"Arcee：又一个Parser Generator轮子","item":"https://xiangzi.me/post/20180902-arcee/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Arcee：又一个Parser Generator轮子","name":"Arcee：又一个Parser Generator轮子","description":"项目地址：https://github.com/gcnyin/arcee 为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有","keywords":["parser","python"],"articleBody":"项目地址：https://github.com/gcnyin/arcee\n为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有相应的bind吗？人类为什么又要再做一遍已经成熟了的东西呢？\n答案是不爽！\n之前刷 EOPL ，想用 Python 改写其中的玩具语言，重写了三四个后，感觉很别扭。教材里自带了一个parser，所以不用考虑解释器前端的东西，但我用Python改写时，由于没有可口的前端，写起来很不爽，每次写完后端，都只能自己用 Python 手敲一遍AST，真的很麻烦，所以我就萌生了自己写一个 parser generator 的想法。\n所以，就有 Arcee 。\n使用方法：\nInstall\n$ pip install Arcee Example\n首先创建grammar文件:\nKEYWORDS : let, if, zero, - NUMBER : \\d+(\\.\\d*)? ASSIGN : = SUBTRACTION : - RIGHT_BRACKET : ( COLON : , LETF_BRACKET : ) ID : [A-Za-z]+ SKIP : [ \\\\t]+ program : expression ; expression : zeroexp | diffexp | ifexp | varexp | letexp | constexp ; constexp : $NUMBER ; diffexp : '-' '(' expression ',' expression ')' ; zeroexp : 'zero' '(' expression ')' ; ifexp : 'if' expression 'then' expression 'else' expression ; varexp : $ID ; letexp : 'let' $ID '=' expression 'in' expression ; 在命令行里执行：\n$ arcee grammar \u003e result.py result.py has three parts:\nToken from collections import namedtuple Token = namedtuple('Token', ['type', 'value', 'line', 'column']) Program = namedtuple('Program', ['expression']) # ... Lexer import re def tokenize(code): pass # ... Parser class Parser: def __init__(self, token_list): pass # ... def parse_expression(self): if xxx: self.parse_constexp() elif yyy: self.parse_diffexp() #... def parse_constexp(self): pass def parse_diffexp(self): pass def parse_zeroexp(self): pass def parse_ifexp(self): pass def parse_varexp(self): pass def parse_letexp(self): pass You can parse input such as: input = '''let a = 0 in if zero(a) then -(a, 1) else -(a, 2)''' tokens = list(tokenize(input)) parser = Parser(tokens) parser.parse_program() result is: result = Program( expression=Expression( nonterminal=Letexp( ID=Token(type='ID', value='a', line=2, column=4), expression1=Expression( nonterminal=Constexp( NUMBER=Token(type='NUMBER', value='0', line=2, column=8))), expression2=Expression( nonterminal=Ifexp( expression1=Expression( nonterminal=Zeroexp( expression=Expression( nonterminal=Varexp( ID=Token(type='ID', value='a', line=2, column=21))))), expression2=Expression( nonterminal=Diffexp( expression1=Expression( nonterminal=Varexp( ID=Token(type='ID', value='a', line=2, column=31))), expression2=Expression( nonterminal=Constexp( NUMBER=Token(type='NUMBER', value='1', line=2, column=34))))), expression3=Expression( nonterminal=Diffexp( expression1=Expression( nonterminal=Varexp( ID=Token(type='ID', value='a', line=2, column=44))), expression2=Expression( nonterminal=Constexp( NUMBER=Token(type='NUMBER', value='2', line=2, column=47)))))))))) 这样就获得了AST。\n这个轮子目前还有一点小问题，不过自己用的话还是没问题。由于工作缘故，估计是要去学 JavaScript 了，这个东西估计不会再更新了（也许哪天还会的。。。），到时估计就是重写一个 npm 包吧，这个再说。\n","wordCount":"626","inLanguage":"en","datePublished":"2018-09-02T12:35:00+08:00","dateModified":"2018-09-02T12:35:00+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://xiangzi.me/post/20180902-arcee/"},"publisher":{"@type":"Organization","name":"箱子的博客","logo":{"@type":"ImageObject","url":"https://xiangzi.me/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://xiangzi.me/ accesskey=h title="箱子的博客 (Alt + H)">箱子的博客</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)"><svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu><li><a href=https://xiangzi.me/ title=Home><span>Home</span></a></li><li><a href=https://xiangzi.me/post/ title=Archives><span>Archives</span></a></li><li><a href=https://xiangzi.me/tags/ title=Tags><span>Tags</span></a></li><li><a href=https://xiangzi.me/categories/ title=Categories><span>Categories</span></a></li><li><a href=https://xiangzi.me/page/about/ title=About><span>About</span></a></li></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class=post-title>Arcee：又一个Parser Generator轮子</h1><div class=post-meta><span title='2018-09-02 12:35:00 +0800 +0800'>September 2, 2018</span></div></header><div class=post-content><p>项目地址：https://github.com/gcnyin/arcee</p><p>为什么要做这样一个东西呢？不是有Antlr吗，Python下不是也有相应的bind吗？人类为什么又要再做一遍已经成熟了的东西呢？</p><p>答案是不爽！</p><p>之前刷 EOPL ，想用 Python 改写其中的玩具语言，重写了三四个后，感觉很别扭。教材里自带了一个parser，所以不用考虑解释器前端的东西，但我用Python改写时，由于没有可口的前端，写起来很不爽，每次写完后端，都只能自己用 Python 手敲一遍AST，真的很麻烦，所以我就萌生了自己写一个 parser generator 的想法。</p><p>所以，就有 Arcee 。</p><p>使用方法：</p><p>Install</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ pip install Arcee
+</span></span></code></pre></div><p>Example</p><p>首先创建grammar文件:</p><pre tabindex=0><code>KEYWORDS        : let, if, zero, -
+NUMBER          : \d+(\.\d*)?
+ASSIGN          : =
+SUBTRACTION     : -
+RIGHT_BRACKET   : (
+COLON           : ,
+LETF_BRACKET    : )
+ID              : [A-Za-z]+
+SKIP            : [ \\t]+
+
+program : expression ;
+expression : zeroexp
+    | diffexp
+    | ifexp
+    | varexp
+    | letexp
+    | constexp
+    ;
+constexp : $NUMBER ;
+diffexp : &#39;-&#39; &#39;(&#39; expression &#39;,&#39; expression &#39;)&#39; ;
+zeroexp : &#39;zero&#39; &#39;(&#39; expression &#39;)&#39; ;
+ifexp : &#39;if&#39; expression &#39;then&#39; expression &#39;else&#39; expression ;
+varexp : $ID ;
+letexp : &#39;let&#39; $ID &#39;=&#39; expression &#39;in&#39; expression ;
+</code></pre><p>在命令行里执行：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ arcee grammar &gt; result.py
+</span></span></code></pre></div><p>result.py has three parts:</p><ol><li>Token</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>from</span> collections <span style=color:#f92672>import</span> namedtuple
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Token <span style=color:#f92672>=</span> namedtuple(<span style=color:#e6db74>&#39;Token&#39;</span>, [<span style=color:#e6db74>&#39;type&#39;</span>, <span style=color:#e6db74>&#39;value&#39;</span>, <span style=color:#e6db74>&#39;line&#39;</span>, <span style=color:#e6db74>&#39;column&#39;</span>])
+</span></span><span style=display:flex><span>Program <span style=color:#f92672>=</span> namedtuple(<span style=color:#e6db74>&#39;Program&#39;</span>, [<span style=color:#e6db74>&#39;expression&#39;</span>])
+</span></span><span style=display:flex><span><span style=color:#75715e># ...</span>
+</span></span></code></pre></div><ol start=2><li>Lexer</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#f92672>import</span> re
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>tokenize</span>(code):
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>pass</span> <span style=color:#75715e># ...</span>
+</span></span></code></pre></div><ol start=3><li>Parser</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>Parser</span>:
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> __init__(self, token_list):
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e># ... </span>
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>parse_expression</span>(self):
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> xxx:
+</span></span><span style=display:flex><span>            self<span style=color:#f92672>.</span>parse_constexp()
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>elif</span> yyy:
+</span></span><span style=display:flex><span>            self<span style=color:#f92672>.</span>parse_diffexp()
+</span></span><span style=display:flex><span>        <span style=color:#75715e>#...</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>parse_constexp</span>(self):
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>parse_diffexp</span>(self):
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>parse_zeroexp</span>(self):
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>parse_ifexp</span>(self):
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>parse_varexp</span>(self):
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>parse_letexp</span>(self):
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>pass</span>
+</span></span><span style=display:flex><span>You can parse input such <span style=color:#66d9ef>as</span>:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>input <span style=color:#f92672>=</span> <span style=color:#e6db74>&#39;&#39;&#39;let a = 0 in if zero(a) then -(a, 1) else -(a, 2)&#39;&#39;&#39;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>tokens <span style=color:#f92672>=</span> list(tokenize(input))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>parser <span style=color:#f92672>=</span> Parser(tokens)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>parser<span style=color:#f92672>.</span>parse_program()
+</span></span><span style=display:flex><span>result <span style=color:#f92672>is</span>:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>result <span style=color:#f92672>=</span> Program(
+</span></span><span style=display:flex><span>    expression<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>        nonterminal<span style=color:#f92672>=</span>Letexp(
+</span></span><span style=display:flex><span>            ID<span style=color:#f92672>=</span>Token(type<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;ID&#39;</span>, value<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;a&#39;</span>, line<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span>, column<span style=color:#f92672>=</span><span style=color:#ae81ff>4</span>),
+</span></span><span style=display:flex><span>            expression1<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                nonterminal<span style=color:#f92672>=</span>Constexp(
+</span></span><span style=display:flex><span>                    NUMBER<span style=color:#f92672>=</span>Token(type<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;NUMBER&#39;</span>, value<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;0&#39;</span>, line<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span>, column<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>))),
+</span></span><span style=display:flex><span>            expression2<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                nonterminal<span style=color:#f92672>=</span>Ifexp(
+</span></span><span style=display:flex><span>                    expression1<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                        nonterminal<span style=color:#f92672>=</span>Zeroexp(
+</span></span><span style=display:flex><span>                            expression<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                                nonterminal<span style=color:#f92672>=</span>Varexp(
+</span></span><span style=display:flex><span>                                    ID<span style=color:#f92672>=</span>Token(type<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;ID&#39;</span>, value<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;a&#39;</span>, line<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span>, column<span style=color:#f92672>=</span><span style=color:#ae81ff>21</span>))))),
+</span></span><span style=display:flex><span>                    expression2<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                        nonterminal<span style=color:#f92672>=</span>Diffexp(
+</span></span><span style=display:flex><span>                            expression1<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                                nonterminal<span style=color:#f92672>=</span>Varexp(
+</span></span><span style=display:flex><span>                                    ID<span style=color:#f92672>=</span>Token(type<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;ID&#39;</span>, value<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;a&#39;</span>, line<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span>, column<span style=color:#f92672>=</span><span style=color:#ae81ff>31</span>))),
+</span></span><span style=display:flex><span>                            expression2<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                                nonterminal<span style=color:#f92672>=</span>Constexp(
+</span></span><span style=display:flex><span>                                    NUMBER<span style=color:#f92672>=</span>Token(type<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;NUMBER&#39;</span>, value<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;1&#39;</span>, line<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span>,
+</span></span><span style=display:flex><span>                                                 column<span style=color:#f92672>=</span><span style=color:#ae81ff>34</span>))))),
+</span></span><span style=display:flex><span>                    expression3<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                        nonterminal<span style=color:#f92672>=</span>Diffexp(
+</span></span><span style=display:flex><span>                            expression1<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                                nonterminal<span style=color:#f92672>=</span>Varexp(
+</span></span><span style=display:flex><span>                                    ID<span style=color:#f92672>=</span>Token(type<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;ID&#39;</span>, value<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;a&#39;</span>, line<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span>, column<span style=color:#f92672>=</span><span style=color:#ae81ff>44</span>))),
+</span></span><span style=display:flex><span>                            expression2<span style=color:#f92672>=</span>Expression(
+</span></span><span style=display:flex><span>                                nonterminal<span style=color:#f92672>=</span>Constexp(
+</span></span><span style=display:flex><span>                                    NUMBER<span style=color:#f92672>=</span>Token(type<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;NUMBER&#39;</span>, value<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;2&#39;</span>, line<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span>,
+</span></span><span style=display:flex><span>                                                 column<span style=color:#f92672>=</span><span style=color:#ae81ff>47</span>))))))))))
+</span></span></code></pre></div><p>这样就获得了AST。</p><p>这个轮子目前还有一点小问题，不过自己用的话还是没问题。由于工作缘故，估计是要去学 JavaScript 了，这个东西估计不会再更新了（也许哪天还会的。。。），到时估计就是重写一个 npm 包吧，这个再说。</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://xiangzi.me/tags/parser/>parser</a></li><li><a href=https://xiangzi.me/tags/python/>python</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2023 <a href=https://xiangzi.me/>箱子的博客</a></span>
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg></a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

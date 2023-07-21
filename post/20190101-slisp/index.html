@@ -1,179 +1,83 @@
-<!doctype html><html lang=en><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><title>slisp：一门简单的JVM上的Lisp方言 - 箱子的博客</title><meta name=renderer content="webkit"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><meta http-equiv=cache-control content="no-transform"><meta http-equiv=cache-control content="no-siteapp"><meta name=theme-color content="#f8f5ec"><meta name=msapplication-navbutton-color content="#f8f5ec"><meta name=apple-mobile-web-app-capable content="yes"><meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec"><meta name=author content="箱子"><meta name=description content="之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶"><meta name=keywords content="blog,博客"><meta name=generator content="Hugo 0.110.0 with theme even"><link rel=canonical href=https://xiangzi.me/post/20190101-slisp/><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest href=/manifest.json><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link href=/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css rel=stylesheet><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous><meta property="og:title" content="slisp：一门简单的JVM上的Lisp方言"><meta property="og:description" content="之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶"><meta property="og:type" content="article"><meta property="og:url" content="https://xiangzi.me/post/20190101-slisp/"><meta property="article:section" content="post"><meta property="article:published_time" content="2019-01-01T21:00:00+08:00"><meta property="article:modified_time" content="2019-01-01T21:00:00+08:00"><meta itemprop=name content="slisp：一门简单的JVM上的Lisp方言"><meta itemprop=description content="之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶"><meta itemprop=datePublished content="2019-01-01T21:00:00+08:00"><meta itemprop=dateModified content="2019-01-01T21:00:00+08:00"><meta itemprop=wordCount content="2397"><meta itemprop=keywords content="parser,java,"><meta name=twitter:card content="summary"><meta name=twitter:title content="slisp：一门简单的JVM上的Lisp方言"><meta name=twitter:description content="之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
-<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]--></head><body><div id=mobile-navbar class=mobile-navbar><div class=mobile-header-logo><a href=/ class=logo>Hello, world!</a></div><div class=mobile-navbar-icon><span></span>
-<span></span>
-<span></span></div></div><nav id=mobile-menu class="mobile-menu slideout-menu"><ul class=mobile-menu-list><a href=/><li class=mobile-menu-item>Home</li></a><a href=/post/><li class=mobile-menu-item>Archives</li></a><a href=/tags/><li class=mobile-menu-item>Tags</li></a><a href=/categories/><li class=mobile-menu-item>Categories</li></a><a href=/page/about/><li class=mobile-menu-item>About</li></a></ul></nav><div class=container id=mobile-panel><header id=header class=header><div class=logo-wrapper><a href=/ class=logo>Hello, world!</a></div><nav class=site-navbar><ul id=menu class=menu><li class=menu-item><a class=menu-item-link href=/>Home</a></li><li class=menu-item><a class=menu-item-link href=/post/>Archives</a></li><li class=menu-item><a class=menu-item-link href=/tags/>Tags</a></li><li class=menu-item><a class=menu-item-link href=/categories/>Categories</a></li><li class=menu-item><a class=menu-item-link href=/page/about/>About</a></li></ul></nav></header><main id=main class=main><div class=content-wrapper><div id=content class=content><article class=post><header class=post-header><h1 class=post-title>slisp：一门简单的JVM上的Lisp方言</h1><div class=post-meta><span class=post-time>2019-01-01</span><div class=post-category><a href=/categories/%E6%8A%80%E6%9C%AF/>技术</a></div></div></header><div class=post-toc id=post-toc><h2 class=post-toc-title>Contents</h2><div class="post-toc-content always-active"><nav id=TableOfContents><ul><li><ul><li><a href=#一前言>一、前言</a></li><li><a href=#二编译和运行>二、编译和运行</a></li><li><a href=#三编译器组成>三、编译器组成</a></li><li><a href=#四字节码简介>四、字节码简介</a></li></ul></li></ul></nav></div></div><div class=post-content><p>之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶段性总结。</p><h2 id=一前言>一、前言</h2><p>之前写过几个解释器，但还没写过编译器。刚好看到知乎Belleve给出的一幅学习路线图，于是决定实现一个lisp方言的编译器。</p><p>之所以选择JVM而不是X86作为目标平台，一是JVM平常用的多一些，可以互相印证、互相补充；二是文档和社区资源丰富友好，开发体验较好。</p><p>项目地址：https://github.com/gcnyin/slisp</p><p>截止最新的commit 77f126d4，实现的功能有：</p><ul><li>定义变量</li><li>支持字符串、整数和布尔类型</li><li>打印以上三种预置类型的值</li><li>四则运算</li><li>条件判断</li></ul><h2 id=二编译和运行>二、编译和运行</h2><p>来一段具体的Slisp程序：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
-</span><span class=lnt>17
-</span><span class=lnt>18
-</span><span class=lnt>19
-</span><span class=lnt>20
-</span><span class=lnt>21
-</span><span class=lnt>22
-</span><span class=lnt>23
-</span><span class=lnt>24
-</span><span class=lnt>25
-</span><span class=lnt>26
-</span><span class=lnt>27
-</span><span class=lnt>28
-</span><span class=lnt>29
-</span><span class=lnt>30
-</span><span class=lnt>31
-</span><span class=lnt>32
-</span><span class=lnt>33
-</span><span class=lnt>34
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-lisp data-lang=lisp><span class=line><span class=cl><span class=p>(</span><span class=nv>define</span> <span class=nv>a</span> <span class=p>(</span><span class=nf>+</span> <span class=mi>1</span> <span class=mi>2</span> <span class=mi>3</span> <span class=mi>4</span><span class=p>))</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>println</span> <span class=nv>a</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>define</span> <span class=nv>b</span> <span class=p>(</span><span class=nf>+</span> <span class=nv>a</span> <span class=nv>a</span><span class=p>))</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>println</span> <span class=nv>b</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>define</span> <span class=nv>a</span> <span class=p>(</span><span class=nf>+</span> <span class=nv>b</span> <span class=nv>b</span><span class=p>))</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>println</span> <span class=nv>a</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>println</span> <span class=p>(</span><span class=nf>+</span> <span class=p>(</span><span class=nf>+</span> <span class=mi>1</span> <span class=mi>1</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>            <span class=p>(</span><span class=nf>-</span> <span class=mi>6</span> <span class=mi>4</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>            <span class=p>(</span><span class=nf>*</span> <span class=mi>2</span> <span class=mi>2</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>            <span class=p>(</span><span class=nf>/</span> <span class=mi>4</span> <span class=mi>2</span><span class=p>)))</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>println</span> <span class=s>&#34;Hello Slisp!&#34;</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>define</span> <span class=nv>c</span> <span class=s>&#34;Hello world!&#34;</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>println</span> <span class=nv>c</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>println</span> <span class=nv>true</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>println</span> <span class=nv>false</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>define</span> <span class=nv>d</span> <span class=nv>true</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=nv>println</span> <span class=nv>d</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=k>if</span> <span class=nv>true</span> <span class=p>(</span><span class=nv>println</span> <span class=nv>true</span><span class=p>)</span> <span class=p>(</span><span class=nv>println</span> <span class=nv>false</span><span class=p>))</span>
-</span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl><span class=p>(</span><span class=k>if</span> <span class=p>(</span><span class=nv>==</span> <span class=mi>1</span> <span class=mi>1</span><span class=p>)</span> <span class=p>(</span><span class=nv>println</span> <span class=s>&#34;1 == 1&#34;</span><span class=p>)</span> <span class=p>(</span><span class=nv>println</span> <span class=s>&#34;1 != 1&#34;</span><span class=p>))</span>
-</span></span></code></pre></td></tr></table></div></div><p>以上程序出自本项目/Slisp/Hello.slisp。</p><p>想要运行必须先打包编译器：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>./gradlew clean build
-</span></span></code></pre></td></tr></table></div></div><p>得到了build/libs/slisp-0.1.0.jar，之后在命令行编译源代码：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>java -jar build/libs/slisp-0.1.0.jar Slisp/Hello.slisp
-</span></span></code></pre></td></tr></table></div></div><p>即可生成Hello.class文件，java Hello运行该文件，输出为：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
-</span><span class=lnt>8
-</span><span class=lnt>9
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=m>20</span>
-</span></span><span class=line><span class=cl><span class=m>10</span>
-</span></span><span class=line><span class=cl>Hello Slisp!
-</span></span><span class=line><span class=cl>Hello world!
-</span></span><span class=line><span class=cl><span class=nb>true</span>
-</span></span><span class=line><span class=cl><span class=nb>false</span>
-</span></span><span class=line><span class=cl><span class=nb>true</span>
-</span></span><span class=line><span class=cl><span class=nb>true</span>
-</span></span><span class=line><span class=cl><span class=o>==</span> <span class=m>1</span>
-</span></span></code></pre></td></tr></table></div></div><h2 id=三编译器组成>三、编译器组成</h2><p>这个编译器由三部分组成，一是前端部分，二是构建抽象语法树，三是递归下降生成字节码。</p><p>前端部分使用了Antlr来构建。Antlr是一个流行的parser generator，可以根据给定的文法，生成相应的parser。因为Slisp本身采用了lisp系的语法，并不复杂，所以很容易写出文法供Antlr使用。</p><p>构建抽象语法树使用了visitor模式。由于Antlr本身返回的结果已经是一棵树，所以这部分的工作是，根据每个节点不同的形态创建相应的类和实例。</p><p>这里有一些实现上的细节可以优化，比如针对四则运算，可以将这些运算全部用一个类来表示，只更改其中的一个字段以示区别。还有一点是，如果打算只使用一个visitor，那么每个节点类都需要继承同一个接口或父类。</p><p>还有，实现了一点简单的类型推导。传统的lisp方言大多是动态语言，不过Slisp是静态的，而且可以在定义变量时推导出变量的类型，不需要开发者手动声明变量的类型。(define a 123)、(define b &ldquo;Hello&rdquo;)和(define c true)可以由字面值推导出类型，而(define d (+ 1 (- 2 3))也可以推导出表达式(+ 1 (- 2 3))的类型并以此确定d的类型。</p><p>生成字节码部分采用了递归下降来生成。比如对(+ (+ 1 1) (- 6 4) (* 2 2) (/ 4 2))，生成了：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>      44: bipush        <span class=m>1</span>
-</span></span><span class=line><span class=cl>      46: bipush        <span class=m>1</span>
-</span></span><span class=line><span class=cl>      48: iadd
-</span></span><span class=line><span class=cl>      49: bipush        <span class=m>6</span>
-</span></span><span class=line><span class=cl>      51: bipush        <span class=m>4</span>
-</span></span><span class=line><span class=cl>      53: isub
-</span></span><span class=line><span class=cl>      54: iadd
-</span></span><span class=line><span class=cl>      55: bipush        <span class=m>2</span>
-</span></span><span class=line><span class=cl>      57: bipush        <span class=m>2</span>
-</span></span><span class=line><span class=cl>      59: imul
-</span></span><span class=line><span class=cl>      60: iadd
-</span></span><span class=line><span class=cl>      61: bipush        <span class=m>4</span>
-</span></span><span class=line><span class=cl>      63: bipush        <span class=m>2</span>
-</span></span><span class=line><span class=cl>      65: idiv
-</span></span><span class=line><span class=cl>      66: iadd
-</span></span></code></pre></td></tr></table></div></div><p>这段代码是Hello.class文件中的一部分，使用OpenJDK中的javap反汇编器生成。</p><p>(+ 1 1)对应44、46和48，先将两个1压入栈中，然后相加，将之前的两个人从栈中弹出，然后将结果压入栈顶，继续执行(- 6 4)。</p><p>这里需要注意的是，并不是说执行完这四个运算(+ 1 1) (- 6 4) (* 2 2) (/ 4 2)，然后再计算它们的和。而是在计算完(+ 1 1)和(- 6 4)之后（结果为2和2），立即计算了(+ 2 2)（得到4），然后计算(* 2 2)（得到4），再计算(+ 4 4)，以此类推。过程如下所示：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
-</span><span class=lnt>8
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=o>(</span>+ <span class=o>(</span>+ <span class=m>1</span> 1<span class=o>)</span> <span class=o>(</span>- <span class=m>6</span> 4<span class=o>)</span> <span class=o>(</span>* <span class=m>2</span> 2<span class=o>)</span> <span class=o>(</span>/ <span class=m>4</span> 2<span class=o>))</span>
-</span></span><span class=line><span class=cl><span class=o>(</span>+ <span class=m>2</span> <span class=o>(</span>- <span class=m>6</span> 4<span class=o>)</span> <span class=o>(</span>* <span class=m>2</span> 2<span class=o>)</span> <span class=o>(</span>/ <span class=m>4</span> 2<span class=o>))</span>
-</span></span><span class=line><span class=cl><span class=o>(</span>+ <span class=m>2</span> <span class=m>2</span> <span class=o>(</span>* <span class=m>2</span> 2<span class=o>)</span> <span class=o>(</span>/ <span class=m>4</span> 2<span class=o>))</span>
-</span></span><span class=line><span class=cl><span class=o>(</span>+ <span class=m>4</span> <span class=o>(</span>* <span class=m>2</span> 2<span class=o>)</span> <span class=o>(</span>/ <span class=m>4</span> 2<span class=o>))</span>
-</span></span><span class=line><span class=cl><span class=o>(</span>+ <span class=m>4</span> <span class=m>4</span> <span class=o>(</span>/ <span class=m>4</span> 2<span class=o>))</span>
-</span></span><span class=line><span class=cl><span class=o>(</span>+ <span class=m>8</span> <span class=o>(</span>/ <span class=m>4</span> 2<span class=o>))</span>
-</span></span><span class=line><span class=cl><span class=o>(</span>+ <span class=m>8</span> 2<span class=o>)</span>
-</span></span><span class=line><span class=cl><span class=o>(</span>10<span class=o>)</span>
-</span></span></code></pre></td></tr></table></div></div><p>为了契合这样的字节码运算方式，后端在创建抽象语法树的时候需要注意“左结合与右结合”的问题。这里采用了右结合的方式，大致结构如下所示：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=o>(</span>+ <span class=o>(</span>/ <span class=m>4</span> 2<span class=o>)</span>
-</span></span><span class=line><span class=cl>   <span class=o>(</span>+ <span class=o>(</span>* <span class=m>2</span> 2<span class=o>)</span>
-</span></span><span class=line><span class=cl>      <span class=o>(</span>+ <span class=o>(</span>- <span class=m>6</span> 4<span class=o>)</span>
-</span></span><span class=line><span class=cl>         <span class=o>(</span>+ <span class=m>1</span> 1<span class=o>))))</span>
-</span></span></code></pre></td></tr></table></div></div><p>这样从底层开始生成字节码，每生成一层，就向上传递，继续生成上层节点的字节码。</p><p>实际开发中使用了ASM库来辅助生成字节码，只需要手动拼接好类似于bipush 1这样的文本传给ASM中合适的类和方法，最后调用generateBytecode这样的方法即可。</p><p>虽然ASM库很方便，但想要生成符合语义的字节码，开发者仍需要阅读JVM规范。JVM规范中定义了各字节码的名称与语义，对照着网络上的众多示例还是很容易理解的。</p><h2 id=四字节码简介>四、字节码简介</h2><p>bipush是指将一个类型为byte扩充为int，然后压到栈上。</p><p>iadd是将栈最上面的两个int弹出，然后计算它们的和，将结果压入栈顶。imul、isub和idiv都类似于iadd，不同之处在于将运算符变为了*、-和/。</p><p>istore将int保存在局部变量中。</p><p>iload从局部变量中取出保存在其中的值。</p><p>astore是将对一个Ojbect的引用保存在局部变量中。</p><p>alocal是将保存在局部变量中的引用压入栈顶。</p><p>ifeq是将栈顶的值与0进行比较，如果相等，进入true branch，否则进行false branch。该指令还会指定一个数字作为false branch入口的地址。</p><p>if_icmpne是比较栈上的两个类型为int的值，如果不相等，进入true branch，否则进入false branch。</p><p>值得注意的是，诸如if这样的指令并不是单个存在，它们更多的像是一个家庭，比如比较两个int会有许多相似的指令，从JVM规范中抄录一段：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>• if_icmpeq succeeds if and only if value1 = value2
-</span></span><span class=line><span class=cl>• if_icmpne succeeds if and only if value1 ≠ value2
-</span></span><span class=line><span class=cl>• if_icmplt succeeds if and only if value1 &lt; value2
-</span></span><span class=line><span class=cl>• if_icmple succeeds if and only if value1 ≤ value2
-</span></span><span class=line><span class=cl>• if_icmpgt succeeds if and only if value1 &gt; value2
-</span></span><span class=line><span class=cl>• if_icmpge succeeds if and only if value1 ≥ value2
-</span></span></code></pre></td></tr></table></div></div><p>可以看到if_icmpne只是用来比较两个数相等时的情况，还有其它指令用于比较不等、大于、小于、相等时的情况。像这样相似而略有区别的指令，JVM规范大多将它们的文档合并在一起，并起名为if_icmp<cond>，这里的cond代表每个指令独特的部分。</p></div><div class=post-copyright><p class=copyright-item><span class=item-title>Author</span>
-<span class=item-content>箱子</span></p><p class=copyright-item><span class=item-title>LastMod</span>
-<span class=item-content>2019-01-01</span></p></div><footer class=post-footer><div class=post-tags><a href=/tags/parser/>parser</a>
-<a href=/tags/java/>java</a></div><nav class=post-nav><a class=prev href=/post/20190908-vim-haskell/><i class="iconfont icon-left"></i>
-<span class="prev-text nav-default">配置vim进行Haskell开发</span>
-<span class="prev-text nav-mobile">Prev</span></a>
-<a class=next href=/post/20190101-2018-review/><span class="next-text nav-default">2018年回顾</span>
-<span class="next-text nav-mobile">Next</span>
-<i class="iconfont icon-right"></i></a></nav></footer></article></div><div id=disqus_thread></div><script type=text/javascript>(function(){if(window.location.hostname==="localhost")return;var t,e=document.createElement("script");e.type="text/javascript",e.async=!0,t="gcnyin",e.src="//"+t+".disqus.com/embed.js",(document.getElementsByTagName("head")[0]||document.getElementsByTagName("body")[0]).appendChild(e)})()</script><noscript>Please enable JavaScript to view the <a href=http://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript></div></main><footer id=footer class=footer><div class=social-links><a href=https://twitter.com/hezhao_huang class="iconfont icon-twitter" title=twitter></a>
-<a href=https://github.com/gcnyin class="iconfont icon-github" title=github></a>
-<a href=https://xiangzi.me/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a></div><div class=copyright><span class=power-by>Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a></span>
-<span class=division>|</span>
-<span class=theme-info>Theme -
-<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a></span>
-<span class=copyright-year>&copy;
-2018 -
-2023<span class=heart><i class="iconfont icon-heart"></i></span><span>箱子</span></span></div></footer><div class=back-to-top id=back-to-top><i class="iconfont icon-up"></i></div></div><script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
-<script type=text/javascript src=/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js></script></body></html>
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>slisp：一门简单的JVM上的Lisp方言 | 箱子的博客</title><meta name=keywords content="parser,java"><meta name=description content="之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶"><meta name=author content><link rel=canonical href=https://xiangzi.me/post/20190101-slisp/><link crossorigin=anonymous href=/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe+FVUFzPh7U=" rel="preload stylesheet" as=style><script defer crossorigin=anonymous src=/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG+9vmJ0cTS+ovo0FeA=" onload=hljs.initHighlightingOnLoad()></script>
+<link rel=icon href=https://xiangzi.me/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://xiangzi.me/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://xiangzi.me/favicon-32x32.png><link rel=apple-touch-icon href=https://xiangzi.me/apple-touch-icon.png><link rel=mask-icon href=https://xiangzi.me/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--hljs-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:title" content="slisp：一门简单的JVM上的Lisp方言"><meta property="og:description" content="之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶"><meta property="og:type" content="article"><meta property="og:url" content="https://xiangzi.me/post/20190101-slisp/"><meta property="article:section" content="post"><meta property="article:published_time" content="2019-01-01T21:00:00+08:00"><meta property="article:modified_time" content="2019-01-01T21:00:00+08:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="slisp：一门简单的JVM上的Lisp方言"><meta name=twitter:description content="之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://xiangzi.me/post/"},{"@type":"ListItem","position":2,"name":"slisp：一门简单的JVM上的Lisp方言","item":"https://xiangzi.me/post/20190101-slisp/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"slisp：一门简单的JVM上的Lisp方言","name":"slisp：一门简单的JVM上的Lisp方言","description":"之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶","keywords":["parser","java"],"articleBody":"之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶段性总结。\n一、前言 之前写过几个解释器，但还没写过编译器。刚好看到知乎Belleve给出的一幅学习路线图，于是决定实现一个lisp方言的编译器。\n之所以选择JVM而不是X86作为目标平台，一是JVM平常用的多一些，可以互相印证、互相补充；二是文档和社区资源丰富友好，开发体验较好。\n项目地址：https://github.com/gcnyin/slisp\n截止最新的commit 77f126d4，实现的功能有：\n定义变量 支持字符串、整数和布尔类型 打印以上三种预置类型的值 四则运算 条件判断 二、编译和运行 来一段具体的Slisp程序：\n(define a (+ 1 2 3 4)) (println a) (define b (+ a a)) (println b) (define a (+ b b)) (println a) (println (+ (+ 1 1) (- 6 4) (* 2 2) (/ 4 2))) (println \"Hello Slisp!\") (define c \"Hello world!\") (println c) (println true) (println false) (define d true) (println d) (if true (println true) (println false)) (if (== 1 1) (println \"1 == 1\") (println \"1 != 1\")) 以上程序出自本项目/Slisp/Hello.slisp。\n想要运行必须先打包编译器：\n./gradlew clean build 得到了build/libs/slisp-0.1.0.jar，之后在命令行编译源代码：\njava -jar build/libs/slisp-0.1.0.jar Slisp/Hello.slisp 即可生成Hello.class文件，java Hello运行该文件，输出为：\n20 10 Hello Slisp! Hello world! true false true true == 1 三、编译器组成 这个编译器由三部分组成，一是前端部分，二是构建抽象语法树，三是递归下降生成字节码。\n前端部分使用了Antlr来构建。Antlr是一个流行的parser generator，可以根据给定的文法，生成相应的parser。因为Slisp本身采用了lisp系的语法，并不复杂，所以很容易写出文法供Antlr使用。\n构建抽象语法树使用了visitor模式。由于Antlr本身返回的结果已经是一棵树，所以这部分的工作是，根据每个节点不同的形态创建相应的类和实例。\n这里有一些实现上的细节可以优化，比如针对四则运算，可以将这些运算全部用一个类来表示，只更改其中的一个字段以示区别。还有一点是，如果打算只使用一个visitor，那么每个节点类都需要继承同一个接口或父类。\n还有，实现了一点简单的类型推导。传统的lisp方言大多是动态语言，不过Slisp是静态的，而且可以在定义变量时推导出变量的类型，不需要开发者手动声明变量的类型。(define a 123)、(define b “Hello”)和(define c true)可以由字面值推导出类型，而(define d (+ 1 (- 2 3))也可以推导出表达式(+ 1 (- 2 3))的类型并以此确定\u001dd的类型。\n生成字节码部分采用了递归下降来生成。比如对(+ (+ 1 1) (- 6 4) (* 2 2) (/ 4 2))，生成了：\n44: bipush 1 46: bipush 1 48: iadd 49: bipush 6 51: bipush 4 53: isub 54: iadd 55: bipush 2 57: bipush 2 59: imul 60: iadd 61: bipush 4 63: bipush 2 65: idiv 66: iadd 这段代码是Hello.class文件中的一部分，使用OpenJDK中的javap反汇编器生成。\n(+ 1 1)对应44、46和48，先将两个1压入栈中，然后相加，将之前的两个人从栈中弹出，然后将结果压入栈顶，继续执行(- 6 4)。\n这里需要注意的是，并不是说执行完这四个运算(+ 1 1) (- 6 4) (* 2 2) (/ 4 2)，然后再计算它们的和。而是在计算完(+ 1 1)和(- 6 4)之后（结果为2和2），立即计算了(+ 2 2)（得到4），然后计算(* 2 2)（得到4），再计算(+ 4 4)，以此类推。过程如下所示：\n(+ (+ 1 1) (- 6 4) (* 2 2) (/ 4 2)) (+ 2 (- 6 4) (* 2 2) (/ 4 2)) (+ 2 2 (* 2 2) (/ 4 2)) (+ 4 (* 2 2) (/ 4 2)) (+ 4 4 (/ 4 2)) (+ 8 (/ 4 2)) (+ 8 2) (10) 为了契合这样的字节码运算方式，后端在创建抽象语法树的时候需要注意“左结合与右结合”的问题。这里采用了右结合的方式，大致结构如下所示：\n(+ (/ 4 2) (+ (* 2 2) (+ (- 6 4) (+ 1 1)))) 这样从底层开始生成字节码，每生成一层，就向上传递，继续生成上层节点的字节码。\n实际开发中使用了ASM库来辅助生成字节码，只需要手动拼接好类似于bipush 1这样的文本传给ASM中合适的类和方法，最后调用generateBytecode这样的方法即可。\n虽然ASM库很方便，但想要生成符合语义的字节码，开发者仍需要阅读JVM规范。JVM规范中定义了各字节码的名称与语义，对照着网络上的众多示例还是很容易理解的。\n四、字节码简介 bipush是指将一个类型为byte扩充为int，然后压到栈上。\niadd是将栈最上面的两个int弹出，然后计算它们的和，将结果压入栈顶。imul、isub和idiv都类似于iadd，不同之处在于将运算符变为了*、-和/。\nistore将int保存在局部变量中。\niload从局部变量中取出保存在其中的值。\nastore是将对一个Ojbect的引用保存在局部变量中。\nalocal是将保存在局部变量中的引用压入栈顶。\nifeq是将栈顶的值与0进行比较，如果相等，进入true branch，否则进行false branch。该指令还会指定一个数字作为false branch入口的地址。\nif_icmpne是比较栈上的两个类型为int的值，如果不相等，进入true branch，否则进入false branch。\n值得注意的是，诸如if这样的指令并不是单个存在，它们更多的像是一个家庭，比如比较两个int会有许多相似的指令，从JVM规范中抄录一段：\n• if_icmpeq succeeds if and only if value1 = value2 • if_icmpne succeeds if and only if value1 ≠ value2 • if_icmplt succeeds if and only if value1 \u003c value2 • if_icmple succeeds if and only if value1 ≤ value2 • if_icmpgt succeeds if and only if value1 \u003e value2 • if_icmpge succeeds if and only if value1 ≥ value2 可以看到if_icmpne只是用来比较两个数相等时的情况，还有其它指令用于比较不等、大于、小于、相等时的情况。像这样相似而略有区别的指令，JVM规范大多将它们的文档合并在一起，并起名为if_icmp，这里的cond代表每个指令独特的部分。\n","wordCount":"2319","inLanguage":"en","datePublished":"2019-01-01T21:00:00+08:00","dateModified":"2019-01-01T21:00:00+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://xiangzi.me/post/20190101-slisp/"},"publisher":{"@type":"Organization","name":"箱子的博客","logo":{"@type":"ImageObject","url":"https://xiangzi.me/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://xiangzi.me/ accesskey=h title="箱子的博客 (Alt + H)">箱子的博客</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)"><svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu><li><a href=https://xiangzi.me/ title=Home><span>Home</span></a></li><li><a href=https://xiangzi.me/post/ title=Archives><span>Archives</span></a></li><li><a href=https://xiangzi.me/tags/ title=Tags><span>Tags</span></a></li><li><a href=https://xiangzi.me/categories/ title=Categories><span>Categories</span></a></li><li><a href=https://xiangzi.me/page/about/ title=About><span>About</span></a></li></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class=post-title>slisp：一门简单的JVM上的Lisp方言</h1><div class=post-meta><span title='2019-01-01 21:00:00 +0800 +0800'>January 1, 2019</span></div></header><div class=post-content><p>之前经常变更学习方向，没有收到很好的学习效果，浪费了不少时间。最近痛定思痛，把方向定为JVM和编译原理，这次真的不改了。本文是学习该方向的阶段性总结。</p><h2 id=一前言>一、前言<a hidden class=anchor aria-hidden=true href=#一前言>#</a></h2><p>之前写过几个解释器，但还没写过编译器。刚好看到知乎Belleve给出的一幅学习路线图，于是决定实现一个lisp方言的编译器。</p><p>之所以选择JVM而不是X86作为目标平台，一是JVM平常用的多一些，可以互相印证、互相补充；二是文档和社区资源丰富友好，开发体验较好。</p><p>项目地址：https://github.com/gcnyin/slisp</p><p>截止最新的commit 77f126d4，实现的功能有：</p><ul><li>定义变量</li><li>支持字符串、整数和布尔类型</li><li>打印以上三种预置类型的值</li><li>四则运算</li><li>条件判断</li></ul><h2 id=二编译和运行>二、编译和运行<a hidden class=anchor aria-hidden=true href=#二编译和运行>#</a></h2><p>来一段具体的Slisp程序：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-lisp data-lang=lisp><span style=display:flex><span>(define a (<span style=color:#a6e22e>+</span> <span style=color:#ae81ff>1</span> <span style=color:#ae81ff>2</span> <span style=color:#ae81ff>3</span> <span style=color:#ae81ff>4</span>))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(println a)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(define b (<span style=color:#a6e22e>+</span> a a))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(println b)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(define a (<span style=color:#a6e22e>+</span> b b))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(println a)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(println (<span style=color:#a6e22e>+</span> (<span style=color:#a6e22e>+</span> <span style=color:#ae81ff>1</span> <span style=color:#ae81ff>1</span>)
+</span></span><span style=display:flex><span>            (<span style=color:#a6e22e>-</span> <span style=color:#ae81ff>6</span> <span style=color:#ae81ff>4</span>)
+</span></span><span style=display:flex><span>            (<span style=color:#a6e22e>*</span> <span style=color:#ae81ff>2</span> <span style=color:#ae81ff>2</span>)
+</span></span><span style=display:flex><span>            (<span style=color:#a6e22e>/</span> <span style=color:#ae81ff>4</span> <span style=color:#ae81ff>2</span>)))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(println <span style=color:#e6db74>&#34;Hello Slisp!&#34;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(define c <span style=color:#e6db74>&#34;Hello world!&#34;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(println c)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(println true)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(println false)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(define d true)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(println d)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(<span style=color:#66d9ef>if</span> true (println true) (println false))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>(<span style=color:#66d9ef>if</span> (== <span style=color:#ae81ff>1</span> <span style=color:#ae81ff>1</span>) (println <span style=color:#e6db74>&#34;1 == 1&#34;</span>) (println <span style=color:#e6db74>&#34;1 != 1&#34;</span>))
+</span></span></code></pre></div><p>以上程序出自本项目/Slisp/Hello.slisp。</p><p>想要运行必须先打包编译器：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>./gradlew clean build
+</span></span></code></pre></div><p>得到了build/libs/slisp-0.1.0.jar，之后在命令行编译源代码：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>java -jar build/libs/slisp-0.1.0.jar Slisp/Hello.slisp
+</span></span></code></pre></div><p>即可生成Hello.class文件，java Hello运行该文件，输出为：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ae81ff>20</span>
+</span></span><span style=display:flex><span><span style=color:#ae81ff>10</span>
+</span></span><span style=display:flex><span>Hello Slisp!
+</span></span><span style=display:flex><span>Hello world!
+</span></span><span style=display:flex><span>true
+</span></span><span style=display:flex><span>false
+</span></span><span style=display:flex><span>true
+</span></span><span style=display:flex><span>true
+</span></span><span style=display:flex><span><span style=color:#f92672>==</span> <span style=color:#ae81ff>1</span>
+</span></span></code></pre></div><h2 id=三编译器组成>三、编译器组成<a hidden class=anchor aria-hidden=true href=#三编译器组成>#</a></h2><p>这个编译器由三部分组成，一是前端部分，二是构建抽象语法树，三是递归下降生成字节码。</p><p>前端部分使用了Antlr来构建。Antlr是一个流行的parser generator，可以根据给定的文法，生成相应的parser。因为Slisp本身采用了lisp系的语法，并不复杂，所以很容易写出文法供Antlr使用。</p><p>构建抽象语法树使用了visitor模式。由于Antlr本身返回的结果已经是一棵树，所以这部分的工作是，根据每个节点不同的形态创建相应的类和实例。</p><p>这里有一些实现上的细节可以优化，比如针对四则运算，可以将这些运算全部用一个类来表示，只更改其中的一个字段以示区别。还有一点是，如果打算只使用一个visitor，那么每个节点类都需要继承同一个接口或父类。</p><p>还有，实现了一点简单的类型推导。传统的lisp方言大多是动态语言，不过Slisp是静态的，而且可以在定义变量时推导出变量的类型，不需要开发者手动声明变量的类型。(define a 123)、(define b &ldquo;Hello&rdquo;)和(define c true)可以由字面值推导出类型，而(define d (+ 1 (- 2 3))也可以推导出表达式(+ 1 (- 2 3))的类型并以此确定d的类型。</p><p>生成字节码部分采用了递归下降来生成。比如对(+ (+ 1 1) (- 6 4) (* 2 2) (/ 4 2))，生成了：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>      44: bipush        <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>      46: bipush        <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>      48: iadd
+</span></span><span style=display:flex><span>      49: bipush        <span style=color:#ae81ff>6</span>
+</span></span><span style=display:flex><span>      51: bipush        <span style=color:#ae81ff>4</span>
+</span></span><span style=display:flex><span>      53: isub
+</span></span><span style=display:flex><span>      54: iadd
+</span></span><span style=display:flex><span>      55: bipush        <span style=color:#ae81ff>2</span>
+</span></span><span style=display:flex><span>      57: bipush        <span style=color:#ae81ff>2</span>
+</span></span><span style=display:flex><span>      59: imul
+</span></span><span style=display:flex><span>      60: iadd
+</span></span><span style=display:flex><span>      61: bipush        <span style=color:#ae81ff>4</span>
+</span></span><span style=display:flex><span>      63: bipush        <span style=color:#ae81ff>2</span>
+</span></span><span style=display:flex><span>      65: idiv
+</span></span><span style=display:flex><span>      66: iadd
+</span></span></code></pre></div><p>这段代码是Hello.class文件中的一部分，使用OpenJDK中的javap反汇编器生成。</p><p>(+ 1 1)对应44、46和48，先将两个1压入栈中，然后相加，将之前的两个人从栈中弹出，然后将结果压入栈顶，继续执行(- 6 4)。</p><p>这里需要注意的是，并不是说执行完这四个运算(+ 1 1) (- 6 4) (* 2 2) (/ 4 2)，然后再计算它们的和。而是在计算完(+ 1 1)和(- 6 4)之后（结果为2和2），立即计算了(+ 2 2)（得到4），然后计算(* 2 2)（得到4），再计算(+ 4 4)，以此类推。过程如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#f92672>(</span>+ <span style=color:#f92672>(</span>+ <span style=color:#ae81ff>1</span> 1<span style=color:#f92672>)</span> <span style=color:#f92672>(</span>- <span style=color:#ae81ff>6</span> 4<span style=color:#f92672>)</span> <span style=color:#f92672>(</span>* <span style=color:#ae81ff>2</span> 2<span style=color:#f92672>)</span> <span style=color:#f92672>(</span>/ <span style=color:#ae81ff>4</span> 2<span style=color:#f92672>))</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>+ <span style=color:#ae81ff>2</span> <span style=color:#f92672>(</span>- <span style=color:#ae81ff>6</span> 4<span style=color:#f92672>)</span> <span style=color:#f92672>(</span>* <span style=color:#ae81ff>2</span> 2<span style=color:#f92672>)</span> <span style=color:#f92672>(</span>/ <span style=color:#ae81ff>4</span> 2<span style=color:#f92672>))</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>+ <span style=color:#ae81ff>2</span> <span style=color:#ae81ff>2</span> <span style=color:#f92672>(</span>* <span style=color:#ae81ff>2</span> 2<span style=color:#f92672>)</span> <span style=color:#f92672>(</span>/ <span style=color:#ae81ff>4</span> 2<span style=color:#f92672>))</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>+ <span style=color:#ae81ff>4</span> <span style=color:#f92672>(</span>* <span style=color:#ae81ff>2</span> 2<span style=color:#f92672>)</span> <span style=color:#f92672>(</span>/ <span style=color:#ae81ff>4</span> 2<span style=color:#f92672>))</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>+ <span style=color:#ae81ff>4</span> <span style=color:#ae81ff>4</span> <span style=color:#f92672>(</span>/ <span style=color:#ae81ff>4</span> 2<span style=color:#f92672>))</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>+ <span style=color:#ae81ff>8</span> <span style=color:#f92672>(</span>/ <span style=color:#ae81ff>4</span> 2<span style=color:#f92672>))</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>+ <span style=color:#ae81ff>8</span> 2<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>(</span>10<span style=color:#f92672>)</span>
+</span></span></code></pre></div><p>为了契合这样的字节码运算方式，后端在创建抽象语法树的时候需要注意“左结合与右结合”的问题。这里采用了右结合的方式，大致结构如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#f92672>(</span>+ <span style=color:#f92672>(</span>/ <span style=color:#ae81ff>4</span> 2<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>   <span style=color:#f92672>(</span>+ <span style=color:#f92672>(</span>* <span style=color:#ae81ff>2</span> 2<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>(</span>+ <span style=color:#f92672>(</span>- <span style=color:#ae81ff>6</span> 4<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>         <span style=color:#f92672>(</span>+ <span style=color:#ae81ff>1</span> 1<span style=color:#f92672>))))</span>
+</span></span></code></pre></div><p>这样从底层开始生成字节码，每生成一层，就向上传递，继续生成上层节点的字节码。</p><p>实际开发中使用了ASM库来辅助生成字节码，只需要手动拼接好类似于bipush 1这样的文本传给ASM中合适的类和方法，最后调用generateBytecode这样的方法即可。</p><p>虽然ASM库很方便，但想要生成符合语义的字节码，开发者仍需要阅读JVM规范。JVM规范中定义了各字节码的名称与语义，对照着网络上的众多示例还是很容易理解的。</p><h2 id=四字节码简介>四、字节码简介<a hidden class=anchor aria-hidden=true href=#四字节码简介>#</a></h2><p>bipush是指将一个类型为byte扩充为int，然后压到栈上。</p><p>iadd是将栈最上面的两个int弹出，然后计算它们的和，将结果压入栈顶。imul、isub和idiv都类似于iadd，不同之处在于将运算符变为了*、-和/。</p><p>istore将int保存在局部变量中。</p><p>iload从局部变量中取出保存在其中的值。</p><p>astore是将对一个Ojbect的引用保存在局部变量中。</p><p>alocal是将保存在局部变量中的引用压入栈顶。</p><p>ifeq是将栈顶的值与0进行比较，如果相等，进入true branch，否则进行false branch。该指令还会指定一个数字作为false branch入口的地址。</p><p>if_icmpne是比较栈上的两个类型为int的值，如果不相等，进入true branch，否则进入false branch。</p><p>值得注意的是，诸如if这样的指令并不是单个存在，它们更多的像是一个家庭，比如比较两个int会有许多相似的指令，从JVM规范中抄录一段：</p><pre tabindex=0><code>• if_icmpeq succeeds if and only if value1 = value2
+• if_icmpne succeeds if and only if value1 ≠ value2
+• if_icmplt succeeds if and only if value1 &lt; value2
+• if_icmple succeeds if and only if value1 ≤ value2
+• if_icmpgt succeeds if and only if value1 &gt; value2
+• if_icmpge succeeds if and only if value1 ≥ value2
+</code></pre><p>可以看到if_icmpne只是用来比较两个数相等时的情况，还有其它指令用于比较不等、大于、小于、相等时的情况。像这样相似而略有区别的指令，JVM规范大多将它们的文档合并在一起，并起名为if_icmp，这里的cond代表每个指令独特的部分。</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://xiangzi.me/tags/parser/>parser</a></li><li><a href=https://xiangzi.me/tags/java/>java</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2023 <a href=https://xiangzi.me/>箱子的博客</a></span>
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg></a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
