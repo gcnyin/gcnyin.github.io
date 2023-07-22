@@ -14,8 +14,8 @@ disqusShortname = "gcnyin"      # disqus_shortname
 googleAnalytics = ""      # UA-XXXXXXXX-X
 copyright = ""            # default: author.name ↓        # 默认为下面配置的author.name ↓
 
-params:
-  comments: true
+[params]
+  comments = true
 
 [author]                  # essential                     # 必需
   name = "箱子"
