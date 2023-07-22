@@ -1,121 +1,327 @@
-<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>使用haproxy，nginx与aria2搭建下载服务 | 箱子的博客</title><meta name=keywords content="haproxy"><meta name=description content="最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostnam"><meta name=author content><link rel=canonical href=https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/><link crossorigin=anonymous href=/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe+FVUFzPh7U=" rel="preload stylesheet" as=style><script defer crossorigin=anonymous src=/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG+9vmJ0cTS+ovo0FeA=" onload=hljs.initHighlightingOnLoad()></script>
-<link rel=icon href=https://xiangzi.me/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://xiangzi.me/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://xiangzi.me/favicon-32x32.png><link rel=apple-touch-icon href=https://xiangzi.me/apple-touch-icon.png><link rel=mask-icon href=https://xiangzi.me/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--hljs-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:title" content="使用haproxy，nginx与aria2搭建下载服务"><meta property="og:description" content="最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostnam"><meta property="og:type" content="article"><meta property="og:url" content="https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/"><meta property="article:section" content="post"><meta property="article:published_time" content="2020-12-26T00:00:00+08:00"><meta property="article:modified_time" content="2020-12-26T00:00:00+08:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="使用haproxy，nginx与aria2搭建下载服务"><meta name=twitter:description content="最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostnam"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://xiangzi.me/post/"},{"@type":"ListItem","position":2,"name":"使用haproxy，nginx与aria2搭建下载服务","item":"https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"使用haproxy，nginx与aria2搭建下载服务","name":"使用haproxy，nginx与aria2搭建下载服务","description":"最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostnam","keywords":["haproxy"],"articleBody":"最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。\n架构大致如下。\nAria2配置如下，大家基本可以直接照抄，只需要修改下rpc-secret，用aria2c --conf-path=/root/aria2/aria2.conf -D命令启动即可。\n# touch /data/aria2.session # vim /etc/aria2/aria2.conf ## '#'开头为注释内容, 选项都有相应的注释说明, 根据需要修改 ## ## 被注释的选项填写的是默认值, 建议在需要修改时再取消注释 ## ## 文件保存相关 ## # 文件的保存路径(可使用绝对路径或相对路径), 默认: 当前启动位置 dir=/root/Downloads # 启用磁盘缓存, 0为禁用缓存, 需1.16以上版本, 默认:16M disk-cache=32M # 文件预分配方式, 能有效降低磁盘碎片, 默认:prealloc # 预分配所需时间: none \u003c falloc ? trunc \u003c prealloc # falloc和trunc则需要文件系统和内核支持 # NTFS建议使用falloc, EXT3/4建议trunc, MAC 下需要注释此项 file-allocation=trunc # 断点续传 continue=true ## 下载连接相关 ## # 最大同时下载任务数, 运行时可修改, 默认:5 max-concurrent-downloads=10 # 同一服务器连接数, 添加时可指定, 默认:1 max-connection-per-server=10 # 最小文件分片大小, 添加时可指定, 取值范围1M -1024M, 默认:20M # 假定size=10M, 文件为20MiB 则使用两个来源下载; 文件为15MiB 则使用一个来源下载 min-split-size=10M # 单个任务最大线程数, 添加时可指定, 默认:5 split=5 # 整体下载速度限制, 运行时可修改, 默认:0 #max-overall-download-limit=0 # 单个任务下载速度限制, 默认:0 #max-download-limit=0 # 整体上传速度限制, 运行时可修改, 默认:0 #max-overall-upload-limit=0 # 单个任务上传速度限制, 默认:0 #max-upload-limit=0 # 禁用IPv6, 默认:false disable-ipv6=true ## 进度保存相关 ## # 从会话文件中读取下载任务 input-file=/root/aria2/aria2.session # 在Aria2退出时保存`错误/未完成`的下载任务到会话文件 save-session=/root/aria2/aria2.session # 定时保存会话, 0为退出时才保存, 需1.16.1以上版本, 默认:0 save-session-interval=60 ## RPC相关设置 ## pause=false rpc-allow-origin-all=true rpc-listen-all=true rpc-save-upload-metadata=true rpc-secure=false # 启用RPC, 默认:false enable-rpc=true # 允许所有来源, 默认:false #rpc-allow-origin-all=true # 允许非外部访问, 默认:false #rpc-listen-all=true # 事件轮询方式, 取值:[epoll, kqueue, port, poll, select], 不同系统默认值不同 event-poll=epoll # RPC监听端口, 端口被占用时可以修改, 默认:6800 rpc-listen-port=6800 # 设置的RPC授权令牌, v1.18.4新增功能, 取代 --rpc-user 和 --rpc-passwd 选项 rpc-secret=XXXXXX # 设置的RPC访问用户名, 此选项新版已废弃, 建议改用 --rpc-secret 选项 #rpc-user= # 设置的RPC访问密码, 此选项新版已废弃, 建议改用 --rpc-secret 选项 #rpc-passwd= ## BT/PT下载相关 ## # 当下载的是一个种子(以.torrent结尾)时, 自动开始BT任务, 默认:true #follow-torrent=true # BT监听端口, 当端口被屏蔽时使用, 默认:6881-6999 listen-port=51413 # 单个种子最大连接数, 默认:55 #bt-max-peers=55 # 打开DHT功能, PT需要禁用, 默认:true enable-dht=true # 打开IPv6 DHT功能, PT需要禁用 #enable-dht6=false # DHT网络监听端口, 默认:6881-6999 #dht-listen-port=6881-6999 # 本地节点查找, PT需要禁用, 默认:false bt-enable-lpd=true # 种子交换, PT需要禁用, 默认:true enable-peer-exchange=false # 每个种子限速, 对少种的PT很有用, 默认:50K #bt-request-peer-speed-limit=50K # 客户端伪装, PT需要 #peer-id-prefix=-TR2770- user-agent=Transmission/2.92 #user-agent=netdisk;4.4.0.6;PC;PC-Windows;6.2.9200;WindowsBaiduYunGuanJia # 当种子的分享率达到这个数时, 自动停止做种, 0为一直做种, 默认:1.0 seed-ratio=1.0 #作种时间大于30分钟，则停止作种 seed-time=30 # 强制保存会话, 话即使任务已经完成, 默认:false # 较新的版本开启后会在任务完成后依然保留.aria2文件 #force-save=false # BT校验相关, 默认:true #bt-hash-check-seed=true # 继续之前的BT任务时, 无需再次校验, 默认:false bt-seed-unverified=true # 保存磁力链接元数据为种子文件(.torrent文件), 默认:false bt-save-metadata=true #下载完成后删除.ara2的同名文件 on-download-complete=/root/aria2/delete_aria2 Aria2后端搭建好后，还需要一个前端页面去操作，这里选用AriaNg，下载最新版本，置于/root/Aria2Ng目录下，同时配置nginx来host这个页面。Nginx配置如下。注意，使用了8081端口，之后还会提到它。\nserver { listen 8081; location / { autoindex on; root /root/AriaNg; } } 接着搭建静态文件服务器，在之前的aria2配置里，默认下载目录为/root/Downloads，我们只需要建一个文件下载服务器，绑定到这个目录即可。好在nginx提供了开箱即用的文件下载服务器。配置如下，端口为8080。\nserver { listen 8080; location / { autoindex on; root /root/Downloads; } } 这三个服务全都在同一台机器上，使用端口访问很不方便，所以加一个代理，根据hostname的不同代理到不同服务上。这里我用的是haproxy，haproxy是一一款老牌的proxy应用，易用又强大。核心配置如下。\nfrontend front443 bind :443 ssl crt-list /etc/haproxy/crt-list.txt alpn http/1.1 bind :80 mode http redirect scheme https code 301 if !{ ssl_fc } acl is_xswl hdr(host) -i xswl.tnb.tw acl is_yysy hdr(host) -i yysy.tnb.tw acl is_awsl hdr(host) -i awsl.tnb.tw use_backend fileserver8080 if is_xswl use_backend aria2c6800 if is_yysy use_backend AriaNg8081 if is_awsl backend fileserver8080 mode http server fileserver8080 127.0.0.1:8080 backend AriaNg8081 mode http server AriaNg8081 127.0.0.1:8081 backend aria2c6800 mode http server aria2c6800 127.0.0.1:6800 通过acl创建hostname的判断条件，如果符合给定的条件则代理到对应的后端服务上。以下是aria2 frontend与文件下载页面的截图。\n","wordCount":"1907","inLanguage":"en","datePublished":"2020-12-26T00:00:00+08:00","dateModified":"2020-12-26T00:00:00+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/"},"publisher":{"@type":"Organization","name":"箱子的博客","logo":{"@type":"ImageObject","url":"https://xiangzi.me/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://xiangzi.me/ accesskey=h title="箱子的博客 (Alt + H)">箱子的博客</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)"><svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu><li><a href=https://xiangzi.me/ title=Home><span>Home</span></a></li><li><a href=https://xiangzi.me/post/ title=Archives><span>Archives</span></a></li><li><a href=https://xiangzi.me/tags/ title=Tags><span>Tags</span></a></li><li><a href=https://xiangzi.me/categories/ title=Categories><span>Categories</span></a></li><li><a href=https://xiangzi.me/page/about/ title=About><span>About</span></a></li></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class=post-title>使用haproxy，nginx与aria2搭建下载服务</h1><div class=post-meta><span title='2020-12-26 00:00:00 +0800 +0800'>December 26, 2020</span></div></header><div class=post-content><p>最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。</p><p>架构大致如下。</p><p><img loading=lazy src=/wangpan-arch.jpg alt=wangpan-arch></p><p>Aria2配置如下，大家基本可以直接照抄，只需要修改下<code>rpc-secret</code>，用<code>aria2c --conf-path=/root/aria2/aria2.conf -D</code>命令启动即可。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-conf data-lang=conf><span style=display:flex><span><span style=color:#75715e># touch /data/aria2.session
-</span></span></span><span style=display:flex><span><span style=color:#75715e># vim /etc/aria2/aria2.conf
-</span></span></span><span style=display:flex><span><span style=color:#75715e>## &#39;#&#39;开头为注释内容, 选项都有相应的注释说明, 根据需要修改 ##
-</span></span></span><span style=display:flex><span><span style=color:#75715e>## 被注释的选项填写的是默认值, 建议在需要修改时再取消注释  ##
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#75715e>## 文件保存相关 ##
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 文件的保存路径(可使用绝对路径或相对路径), 默认: 当前启动位置
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>dir<span style=color:#f92672>=</span><span style=color:#960050;background-color:#1e0010>/</span>root<span style=color:#960050;background-color:#1e0010>/</span>Downloads
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 启用磁盘缓存, 0为禁用缓存, 需1.16以上版本, 默认:16M
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>disk-cache<span style=color:#f92672>=</span>32M
-</span></span><span style=display:flex><span><span style=color:#75715e># 文件预分配方式, 能有效降低磁盘碎片, 默认:prealloc
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 预分配所需时间: none &lt; falloc ? trunc &lt; prealloc
-</span></span></span><span style=display:flex><span><span style=color:#75715e># falloc和trunc则需要文件系统和内核支持
-</span></span></span><span style=display:flex><span><span style=color:#75715e># NTFS建议使用falloc, EXT3/4建议trunc, MAC 下需要注释此项
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>file-allocation<span style=color:#f92672>=</span>trunc
-</span></span><span style=display:flex><span><span style=color:#75715e># 断点续传
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>continue<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#75715e>## 下载连接相关 ##
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 最大同时下载任务数, 运行时可修改, 默认:5
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>max-concurrent-downloads<span style=color:#f92672>=</span>10
-</span></span><span style=display:flex><span><span style=color:#75715e># 同一服务器连接数, 添加时可指定, 默认:1
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>max-connection-per-server<span style=color:#f92672>=</span>10
-</span></span><span style=display:flex><span><span style=color:#75715e># 最小文件分片大小, 添加时可指定, 取值范围1M -1024M, 默认:20M
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 假定size=10M, 文件为20MiB 则使用两个来源下载; 文件为15MiB 则使用一个来源下载
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>min-split-size<span style=color:#f92672>=</span>10M
-</span></span><span style=display:flex><span><span style=color:#75715e># 单个任务最大线程数, 添加时可指定, 默认:5
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>split<span style=color:#f92672>=</span>5
-</span></span><span style=display:flex><span><span style=color:#75715e># 整体下载速度限制, 运行时可修改, 默认:0
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#max-overall-download-limit=0
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 单个任务下载速度限制, 默认:0
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#max-download-limit=0
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 整体上传速度限制, 运行时可修改, 默认:0
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#max-overall-upload-limit=0
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 单个任务上传速度限制, 默认:0
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#max-upload-limit=0
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 禁用IPv6, 默认:false
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>disable-ipv6<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#75715e>## 进度保存相关 ##
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 从会话文件中读取下载任务
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>input-file<span style=color:#f92672>=</span><span style=color:#960050;background-color:#1e0010>/</span>root<span style=color:#960050;background-color:#1e0010>/</span>aria2<span style=color:#960050;background-color:#1e0010>/</span>aria2.session
-</span></span><span style=display:flex><span><span style=color:#75715e># 在Aria2退出时保存`错误/未完成`的下载任务到会话文件
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>save-session<span style=color:#f92672>=</span><span style=color:#960050;background-color:#1e0010>/</span>root<span style=color:#960050;background-color:#1e0010>/</span>aria2<span style=color:#960050;background-color:#1e0010>/</span>aria2.session
-</span></span><span style=display:flex><span><span style=color:#75715e># 定时保存会话, 0为退出时才保存, 需1.16.1以上版本, 默认:0
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>save-session-interval<span style=color:#f92672>=</span>60
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#75715e>## RPC相关设置 ##
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span>pause<span style=color:#f92672>=</span><span style=color:#66d9ef>false</span>
-</span></span><span style=display:flex><span>rpc-allow-origin-all<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span>rpc-listen-all<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span>rpc-save-upload-metadata<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span>rpc-secure<span style=color:#f92672>=</span><span style=color:#66d9ef>false</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 启用RPC, 默认:false
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>enable-rpc<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 允许所有来源, 默认:false
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#rpc-allow-origin-all=true
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 允许非外部访问, 默认:false
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#rpc-listen-all=true
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 事件轮询方式, 取值:[epoll, kqueue, port, poll, select], 不同系统默认值不同
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>event-poll<span style=color:#f92672>=</span>epoll
-</span></span><span style=display:flex><span><span style=color:#75715e># RPC监听端口, 端口被占用时可以修改, 默认:6800
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>rpc-listen-port<span style=color:#f92672>=</span>6800
-</span></span><span style=display:flex><span><span style=color:#75715e># 设置的RPC授权令牌, v1.18.4新增功能, 取代 --rpc-user 和 --rpc-passwd 选项
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>rpc-secret<span style=color:#f92672>=</span>XXXXXX
-</span></span><span style=display:flex><span><span style=color:#75715e># 设置的RPC访问用户名, 此选项新版已废弃, 建议改用 --rpc-secret 选项
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#rpc-user=&lt;USER&gt;
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 设置的RPC访问密码, 此选项新版已废弃, 建议改用 --rpc-secret 选项
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#rpc-passwd=&lt;PASSWD&gt;
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#75715e>## BT/PT下载相关 ##
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 当下载的是一个种子(以.torrent结尾)时, 自动开始BT任务, 默认:true
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#follow-torrent=true
-</span></span></span><span style=display:flex><span><span style=color:#75715e># BT监听端口, 当端口被屏蔽时使用, 默认:6881-6999
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>listen-port<span style=color:#f92672>=</span>51413
-</span></span><span style=display:flex><span><span style=color:#75715e># 单个种子最大连接数, 默认:55
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#bt-max-peers=55
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 打开DHT功能, PT需要禁用, 默认:true
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>enable-dht<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 打开IPv6 DHT功能, PT需要禁用
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#enable-dht6=false
-</span></span></span><span style=display:flex><span><span style=color:#75715e># DHT网络监听端口, 默认:6881-6999
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#dht-listen-port=6881-6999
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 本地节点查找, PT需要禁用, 默认:false
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>bt-enable-lpd<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 种子交换, PT需要禁用, 默认:true
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>enable-peer-exchange<span style=color:#f92672>=</span><span style=color:#66d9ef>false</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 每个种子限速, 对少种的PT很有用, 默认:50K
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#bt-request-peer-speed-limit=50K
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 客户端伪装, PT需要
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#peer-id-prefix=-TR2770-
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>user-agent<span style=color:#f92672>=</span>Transmission<span style=color:#960050;background-color:#1e0010>/</span>2.92
-</span></span><span style=display:flex><span><span style=color:#75715e>#user-agent=netdisk;4.4.0.6;PC;PC-Windows;6.2.9200;WindowsBaiduYunGuanJia
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 当种子的分享率达到这个数时, 自动停止做种, 0为一直做种, 默认:1.0
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span>seed-ratio<span style=color:#f92672>=</span>1.0
-</span></span><span style=display:flex><span><span style=color:#75715e>#作种时间大于30分钟，则停止作种
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>seed-time<span style=color:#f92672>=</span>30
-</span></span><span style=display:flex><span><span style=color:#75715e># 强制保存会话, 话即使任务已经完成, 默认:false
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 较新的版本开启后会在任务完成后依然保留.aria2文件
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#force-save=false
-</span></span></span><span style=display:flex><span><span style=color:#75715e># BT校验相关, 默认:true
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#bt-hash-check-seed=true
-</span></span></span><span style=display:flex><span><span style=color:#75715e># 继续之前的BT任务时, 无需再次校验, 默认:false
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>bt-seed-unverified<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span><span style=color:#75715e># 保存磁力链接元数据为种子文件(.torrent文件), 默认:false
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>bt-save-metadata<span style=color:#f92672>=</span><span style=color:#66d9ef>true</span>
-</span></span><span style=display:flex><span><span style=color:#75715e>#下载完成后删除.ara2的同名文件
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>on</span>-download-complete<span style=color:#f92672>=</span><span style=color:#960050;background-color:#1e0010>/</span>root<span style=color:#960050;background-color:#1e0010>/</span>aria2<span style=color:#960050;background-color:#1e0010>/</span>delete_aria2
-</span></span></code></pre></div><p>Aria2后端搭建好后，还需要一个前端页面去操作，这里选用<a href=https://github.com/mayswind/AriaNg>AriaNg</a>，下载最新版本，置于<code>/root/Aria2Ng</code>目录下，同时配置nginx来host这个页面。Nginx配置如下。注意，使用了8081端口，之后还会提到它。</p><pre tabindex=0><code>server {
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>使用haproxy，nginx与aria2搭建下载服务 | 箱子的博客</title>
+<meta name="keywords" content="haproxy">
+<meta name="description" content="最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostnam">
+<meta name="author" content="">
+<link rel="canonical" href="https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://xiangzi.me/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://xiangzi.me/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://xiangzi.me/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://xiangzi.me/apple-touch-icon.png">
+<link rel="mask-icon" href="https://xiangzi.me/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="使用haproxy，nginx与aria2搭建下载服务" />
+<meta property="og:description" content="最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostnam" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2020-12-26T00:00:00+08:00" />
+<meta property="article:modified_time" content="2020-12-26T00:00:00+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="使用haproxy，nginx与aria2搭建下载服务"/>
+<meta name="twitter:description" content="最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostnam"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://xiangzi.me/post/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "使用haproxy，nginx与aria2搭建下载服务",
+      "item": "https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "使用haproxy，nginx与aria2搭建下载服务",
+  "name": "使用haproxy，nginx与aria2搭建下载服务",
+  "description": "最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostnam",
+  "keywords": [
+    "haproxy"
+  ],
+  "articleBody": "最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。\n架构大致如下。\nAria2配置如下，大家基本可以直接照抄，只需要修改下rpc-secret，用aria2c --conf-path=/root/aria2/aria2.conf -D命令启动即可。\n# touch /data/aria2.session # vim /etc/aria2/aria2.conf ## '#'开头为注释内容, 选项都有相应的注释说明, 根据需要修改 ## ## 被注释的选项填写的是默认值, 建议在需要修改时再取消注释 ## ## 文件保存相关 ## # 文件的保存路径(可使用绝对路径或相对路径), 默认: 当前启动位置 dir=/root/Downloads # 启用磁盘缓存, 0为禁用缓存, 需1.16以上版本, 默认:16M disk-cache=32M # 文件预分配方式, 能有效降低磁盘碎片, 默认:prealloc # 预分配所需时间: none \u003c falloc ? trunc \u003c prealloc # falloc和trunc则需要文件系统和内核支持 # NTFS建议使用falloc, EXT3/4建议trunc, MAC 下需要注释此项 file-allocation=trunc # 断点续传 continue=true ## 下载连接相关 ## # 最大同时下载任务数, 运行时可修改, 默认:5 max-concurrent-downloads=10 # 同一服务器连接数, 添加时可指定, 默认:1 max-connection-per-server=10 # 最小文件分片大小, 添加时可指定, 取值范围1M -1024M, 默认:20M # 假定size=10M, 文件为20MiB 则使用两个来源下载; 文件为15MiB 则使用一个来源下载 min-split-size=10M # 单个任务最大线程数, 添加时可指定, 默认:5 split=5 # 整体下载速度限制, 运行时可修改, 默认:0 #max-overall-download-limit=0 # 单个任务下载速度限制, 默认:0 #max-download-limit=0 # 整体上传速度限制, 运行时可修改, 默认:0 #max-overall-upload-limit=0 # 单个任务上传速度限制, 默认:0 #max-upload-limit=0 # 禁用IPv6, 默认:false disable-ipv6=true ## 进度保存相关 ## # 从会话文件中读取下载任务 input-file=/root/aria2/aria2.session # 在Aria2退出时保存`错误/未完成`的下载任务到会话文件 save-session=/root/aria2/aria2.session # 定时保存会话, 0为退出时才保存, 需1.16.1以上版本, 默认:0 save-session-interval=60 ## RPC相关设置 ## pause=false rpc-allow-origin-all=true rpc-listen-all=true rpc-save-upload-metadata=true rpc-secure=false # 启用RPC, 默认:false enable-rpc=true # 允许所有来源, 默认:false #rpc-allow-origin-all=true # 允许非外部访问, 默认:false #rpc-listen-all=true # 事件轮询方式, 取值:[epoll, kqueue, port, poll, select], 不同系统默认值不同 event-poll=epoll # RPC监听端口, 端口被占用时可以修改, 默认:6800 rpc-listen-port=6800 # 设置的RPC授权令牌, v1.18.4新增功能, 取代 --rpc-user 和 --rpc-passwd 选项 rpc-secret=XXXXXX # 设置的RPC访问用户名, 此选项新版已废弃, 建议改用 --rpc-secret 选项 #rpc-user= # 设置的RPC访问密码, 此选项新版已废弃, 建议改用 --rpc-secret 选项 #rpc-passwd= ## BT/PT下载相关 ## # 当下载的是一个种子(以.torrent结尾)时, 自动开始BT任务, 默认:true #follow-torrent=true # BT监听端口, 当端口被屏蔽时使用, 默认:6881-6999 listen-port=51413 # 单个种子最大连接数, 默认:55 #bt-max-peers=55 # 打开DHT功能, PT需要禁用, 默认:true enable-dht=true # 打开IPv6 DHT功能, PT需要禁用 #enable-dht6=false # DHT网络监听端口, 默认:6881-6999 #dht-listen-port=6881-6999 # 本地节点查找, PT需要禁用, 默认:false bt-enable-lpd=true # 种子交换, PT需要禁用, 默认:true enable-peer-exchange=false # 每个种子限速, 对少种的PT很有用, 默认:50K #bt-request-peer-speed-limit=50K # 客户端伪装, PT需要 #peer-id-prefix=-TR2770- user-agent=Transmission/2.92 #user-agent=netdisk;4.4.0.6;PC;PC-Windows;6.2.9200;WindowsBaiduYunGuanJia # 当种子的分享率达到这个数时, 自动停止做种, 0为一直做种, 默认:1.0 seed-ratio=1.0 #作种时间大于30分钟，则停止作种 seed-time=30 # 强制保存会话, 话即使任务已经完成, 默认:false # 较新的版本开启后会在任务完成后依然保留.aria2文件 #force-save=false # BT校验相关, 默认:true #bt-hash-check-seed=true # 继续之前的BT任务时, 无需再次校验, 默认:false bt-seed-unverified=true # 保存磁力链接元数据为种子文件(.torrent文件), 默认:false bt-save-metadata=true #下载完成后删除.ara2的同名文件 on-download-complete=/root/aria2/delete_aria2 Aria2后端搭建好后，还需要一个前端页面去操作，这里选用AriaNg，下载最新版本，置于/root/Aria2Ng目录下，同时配置nginx来host这个页面。Nginx配置如下。注意，使用了8081端口，之后还会提到它。\nserver { listen 8081; location / { autoindex on; root /root/AriaNg; } } 接着搭建静态文件服务器，在之前的aria2配置里，默认下载目录为/root/Downloads，我们只需要建一个文件下载服务器，绑定到这个目录即可。好在nginx提供了开箱即用的文件下载服务器。配置如下，端口为8080。\nserver { listen 8080; location / { autoindex on; root /root/Downloads; } } 这三个服务全都在同一台机器上，使用端口访问很不方便，所以加一个代理，根据hostname的不同代理到不同服务上。这里我用的是haproxy，haproxy是一一款老牌的proxy应用，易用又强大。核心配置如下。\nfrontend front443 bind :443 ssl crt-list /etc/haproxy/crt-list.txt alpn http/1.1 bind :80 mode http redirect scheme https code 301 if !{ ssl_fc } acl is_xswl hdr(host) -i xswl.tnb.tw acl is_yysy hdr(host) -i yysy.tnb.tw acl is_awsl hdr(host) -i awsl.tnb.tw use_backend fileserver8080 if is_xswl use_backend aria2c6800 if is_yysy use_backend AriaNg8081 if is_awsl backend fileserver8080 mode http server fileserver8080 127.0.0.1:8080 backend AriaNg8081 mode http server AriaNg8081 127.0.0.1:8081 backend aria2c6800 mode http server aria2c6800 127.0.0.1:6800 通过acl创建hostname的判断条件，如果符合给定的条件则代理到对应的后端服务上。以下是aria2 frontend与文件下载页面的截图。\n",
+  "wordCount" : "1907",
+  "inLanguage": "en",
+  "datePublished": "2020-12-26T00:00:00+08:00",
+  "dateModified": "2020-12-26T00:00:00+08:00",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "箱子的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://xiangzi.me/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://xiangzi.me/" accesskey="h" title="箱子的博客 (Alt + H)">箱子的博客</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://xiangzi.me/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://xiangzi.me/post/" title="Archives">
+                    <span>Archives</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://xiangzi.me/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://xiangzi.me/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://xiangzi.me/page/about/" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title">
+      使用haproxy，nginx与aria2搭建下载服务
+    </h1>
+    <div class="post-meta"><span title='2020-12-26 00:00:00 +0800 +0800'>December 26, 2020</span>
+
+</div>
+  </header> 
+  <div class="post-content"><p>最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。</p>
+<p>架构大致如下。</p>
+<p><img loading="lazy" src="/wangpan-arch.jpg" alt="wangpan-arch"  />
+</p>
+<p>Aria2配置如下，大家基本可以直接照抄，只需要修改下<code>rpc-secret</code>，用<code>aria2c --conf-path=/root/aria2/aria2.conf -D</code>命令启动即可。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-conf" data-lang="conf"><span style="display:flex;"><span><span style="color:#75715e"># touch /data/aria2.session
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># vim /etc/aria2/aria2.conf
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">## &#39;#&#39;开头为注释内容, 选项都有相应的注释说明, 根据需要修改 ##
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">## 被注释的选项填写的是默认值, 建议在需要修改时再取消注释  ##
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## 文件保存相关 ##
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 文件的保存路径(可使用绝对路径或相对路径), 默认: 当前启动位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>dir<span style="color:#f92672">=</span><span style="color:#960050;background-color:#1e0010">/</span>root<span style="color:#960050;background-color:#1e0010">/</span>Downloads
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 启用磁盘缓存, 0为禁用缓存, 需1.16以上版本, 默认:16M
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>disk-cache<span style="color:#f92672">=</span>32M
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 文件预分配方式, 能有效降低磁盘碎片, 默认:prealloc
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 预分配所需时间: none &lt; falloc ? trunc &lt; prealloc
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># falloc和trunc则需要文件系统和内核支持
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># NTFS建议使用falloc, EXT3/4建议trunc, MAC 下需要注释此项
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>file-allocation<span style="color:#f92672">=</span>trunc
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 断点续传
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>continue<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## 下载连接相关 ##
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 最大同时下载任务数, 运行时可修改, 默认:5
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>max-concurrent-downloads<span style="color:#f92672">=</span>10
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 同一服务器连接数, 添加时可指定, 默认:1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>max-connection-per-server<span style="color:#f92672">=</span>10
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 最小文件分片大小, 添加时可指定, 取值范围1M -1024M, 默认:20M
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 假定size=10M, 文件为20MiB 则使用两个来源下载; 文件为15MiB 则使用一个来源下载
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>min-split-size<span style="color:#f92672">=</span>10M
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 单个任务最大线程数, 添加时可指定, 默认:5
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>split<span style="color:#f92672">=</span>5
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 整体下载速度限制, 运行时可修改, 默认:0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#max-overall-download-limit=0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 单个任务下载速度限制, 默认:0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#max-download-limit=0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 整体上传速度限制, 运行时可修改, 默认:0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#max-overall-upload-limit=0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 单个任务上传速度限制, 默认:0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#max-upload-limit=0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 禁用IPv6, 默认:false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>disable-ipv6<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## 进度保存相关 ##
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 从会话文件中读取下载任务
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>input-file<span style="color:#f92672">=</span><span style="color:#960050;background-color:#1e0010">/</span>root<span style="color:#960050;background-color:#1e0010">/</span>aria2<span style="color:#960050;background-color:#1e0010">/</span>aria2.session
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 在Aria2退出时保存`错误/未完成`的下载任务到会话文件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>save-session<span style="color:#f92672">=</span><span style="color:#960050;background-color:#1e0010">/</span>root<span style="color:#960050;background-color:#1e0010">/</span>aria2<span style="color:#960050;background-color:#1e0010">/</span>aria2.session
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 定时保存会话, 0为退出时才保存, 需1.16.1以上版本, 默认:0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>save-session-interval<span style="color:#f92672">=</span>60
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## RPC相关设置 ##
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>pause<span style="color:#f92672">=</span><span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>rpc-allow-origin-all<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>rpc-listen-all<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>rpc-save-upload-metadata<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>rpc-secure<span style="color:#f92672">=</span><span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 启用RPC, 默认:false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>enable-rpc<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 允许所有来源, 默认:false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#rpc-allow-origin-all=true
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 允许非外部访问, 默认:false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#rpc-listen-all=true
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 事件轮询方式, 取值:[epoll, kqueue, port, poll, select], 不同系统默认值不同
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>event-poll<span style="color:#f92672">=</span>epoll
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># RPC监听端口, 端口被占用时可以修改, 默认:6800
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>rpc-listen-port<span style="color:#f92672">=</span>6800
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 设置的RPC授权令牌, v1.18.4新增功能, 取代 --rpc-user 和 --rpc-passwd 选项
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>rpc-secret<span style="color:#f92672">=</span>XXXXXX
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 设置的RPC访问用户名, 此选项新版已废弃, 建议改用 --rpc-secret 选项
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#rpc-user=&lt;USER&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 设置的RPC访问密码, 此选项新版已废弃, 建议改用 --rpc-secret 选项
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#rpc-passwd=&lt;PASSWD&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## BT/PT下载相关 ##
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 当下载的是一个种子(以.torrent结尾)时, 自动开始BT任务, 默认:true
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#follow-torrent=true
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># BT监听端口, 当端口被屏蔽时使用, 默认:6881-6999
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>listen-port<span style="color:#f92672">=</span>51413
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 单个种子最大连接数, 默认:55
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#bt-max-peers=55
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 打开DHT功能, PT需要禁用, 默认:true
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>enable-dht<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 打开IPv6 DHT功能, PT需要禁用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#enable-dht6=false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># DHT网络监听端口, 默认:6881-6999
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#dht-listen-port=6881-6999
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 本地节点查找, PT需要禁用, 默认:false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>bt-enable-lpd<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 种子交换, PT需要禁用, 默认:true
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>enable-peer-exchange<span style="color:#f92672">=</span><span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 每个种子限速, 对少种的PT很有用, 默认:50K
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#bt-request-peer-speed-limit=50K
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 客户端伪装, PT需要
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#peer-id-prefix=-TR2770-
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>user-agent<span style="color:#f92672">=</span>Transmission<span style="color:#960050;background-color:#1e0010">/</span>2.92
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#user-agent=netdisk;4.4.0.6;PC;PC-Windows;6.2.9200;WindowsBaiduYunGuanJia
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 当种子的分享率达到这个数时, 自动停止做种, 0为一直做种, 默认:1.0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>seed-ratio<span style="color:#f92672">=</span>1.0
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#作种时间大于30分钟，则停止作种
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>seed-time<span style="color:#f92672">=</span>30
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 强制保存会话, 话即使任务已经完成, 默认:false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 较新的版本开启后会在任务完成后依然保留.aria2文件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#force-save=false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># BT校验相关, 默认:true
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#bt-hash-check-seed=true
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># 继续之前的BT任务时, 无需再次校验, 默认:false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>bt-seed-unverified<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 保存磁力链接元数据为种子文件(.torrent文件), 默认:false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>bt-save-metadata<span style="color:#f92672">=</span><span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#下载完成后删除.ara2的同名文件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">on</span>-download-complete<span style="color:#f92672">=</span><span style="color:#960050;background-color:#1e0010">/</span>root<span style="color:#960050;background-color:#1e0010">/</span>aria2<span style="color:#960050;background-color:#1e0010">/</span>delete_aria2
+</span></span></code></pre></div><p>Aria2后端搭建好后，还需要一个前端页面去操作，这里选用<a href="https://github.com/mayswind/AriaNg">AriaNg</a>，下载最新版本，置于<code>/root/Aria2Ng</code>目录下，同时配置nginx来host这个页面。Nginx配置如下。注意，使用了8081端口，之后还会提到它。</p>
+<pre tabindex="0"><code>server {
     listen 8081;
 
     location / {
@@ -123,7 +329,8 @@
         root /root/AriaNg;
     }
 }
-</code></pre><p>接着搭建静态文件服务器，在之前的aria2配置里，默认下载目录为<code>/root/Downloads</code>，我们只需要建一个文件下载服务器，绑定到这个目录即可。好在nginx提供了开箱即用的文件下载服务器。配置如下，端口为8080。</p><pre tabindex=0><code>server {
+</code></pre><p>接着搭建静态文件服务器，在之前的aria2配置里，默认下载目录为<code>/root/Downloads</code>，我们只需要建一个文件下载服务器，绑定到这个目录即可。好在nginx提供了开箱即用的文件下载服务器。配置如下，端口为8080。</p>
+<pre tabindex="0"><code>server {
     listen 8080;
 
     location / {
@@ -131,7 +338,8 @@
         root /root/Downloads;
     }
 }
-</code></pre><p>这三个服务全都在同一台机器上，使用端口访问很不方便，所以加一个代理，根据hostname的不同代理到不同服务上。这里我用的是haproxy，haproxy是一一款老牌的proxy应用，易用又强大。核心配置如下。</p><pre tabindex=0><code>frontend front443
+</code></pre><p>这三个服务全都在同一台机器上，使用端口访问很不方便，所以加一个代理，根据hostname的不同代理到不同服务上。这里我用的是haproxy，haproxy是一一款老牌的proxy应用，易用又强大。核心配置如下。</p>
+<pre tabindex="0"><code>frontend front443
     bind :443 ssl crt-list /etc/haproxy/crt-list.txt alpn http/1.1
     bind :80
     mode http
@@ -154,7 +362,91 @@ backend AriaNg8081
 backend aria2c6800
     mode http
     server aria2c6800 127.0.0.1:6800
-</code></pre><p>通过acl创建hostname的判断条件，如果符合给定的条件则代理到对应的后端服务上。以下是aria2 frontend与文件下载页面的截图。</p><p><img loading=lazy src=/aria2ng.png alt=aria2ng></p><p><img loading=lazy src=/nginx-autoindex.png alt=nginx-autoindex></p></div><footer class=post-footer><ul class=post-tags><li><a href=https://xiangzi.me/tags/haproxy/>haproxy</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2023 <a href=https://xiangzi.me/>箱子的博客</a></span>
-<span>Powered by
-<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
-        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg></a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
+</code></pre><p>通过acl创建hostname的判断条件，如果符合给定的条件则代理到对应的后端服务上。以下是aria2 frontend与文件下载页面的截图。</p>
+<p><img loading="lazy" src="/aria2ng.png" alt="aria2ng"  />
+</p>
+<p><img loading="lazy" src="/nginx-autoindex.png" alt="nginx-autoindex"  />
+</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://xiangzi.me/tags/haproxy/">haproxy</a></li>
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://xiangzi.me/">箱子的博客</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

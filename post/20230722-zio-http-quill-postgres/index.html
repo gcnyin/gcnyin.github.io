@@ -1,145 +1,460 @@
-<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>使用zio-http, quill与postgres开发web服务 | 箱子的博客</title><meta name=keywords content="scala"><meta name=description content="本文面向有一定scala和zio基础的读者。 zio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐"><meta name=author content><link rel=canonical href=https://xiangzi.me/post/20230722-zio-http-quill-postgres/><link crossorigin=anonymous href=/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe+FVUFzPh7U=" rel="preload stylesheet" as=style><script defer crossorigin=anonymous src=/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG+9vmJ0cTS+ovo0FeA=" onload=hljs.initHighlightingOnLoad()></script>
-<link rel=icon href=https://xiangzi.me/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://xiangzi.me/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://xiangzi.me/favicon-32x32.png><link rel=apple-touch-icon href=https://xiangzi.me/apple-touch-icon.png><link rel=mask-icon href=https://xiangzi.me/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--hljs-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:title" content="使用zio-http, quill与postgres开发web服务"><meta property="og:description" content="本文面向有一定scala和zio基础的读者。 zio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐"><meta property="og:type" content="article"><meta property="og:url" content="https://xiangzi.me/post/20230722-zio-http-quill-postgres/"><meta property="article:section" content="post"><meta property="article:published_time" content="2023-07-22T00:53:32+08:00"><meta property="article:modified_time" content="2023-07-22T00:53:32+08:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="使用zio-http, quill与postgres开发web服务"><meta name=twitter:description content="本文面向有一定scala和zio基础的读者。 zio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://xiangzi.me/post/"},{"@type":"ListItem","position":2,"name":"使用zio-http, quill与postgres开发web服务","item":"https://xiangzi.me/post/20230722-zio-http-quill-postgres/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"使用zio-http, quill与postgres开发web服务","name":"使用zio-http, quill与postgres开发web服务","description":"本文面向有一定scala和zio基础的读者。 zio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐","keywords":["scala"],"articleBody":" 本文面向有一定scala和zio基础的读者。\nzio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐渐流行。zio-http是zio生态中的http库，原本是非官方项目，前段时间获得了zio官方支持。quill是zio生态中的数据库操作库，支持主流关系型数据库，当初转投zio社区还引发了不小的风波。\n访问数据库 引入依赖\nlibraryDependencies ++= Seq( \"dev.zio\" %% \"zio\" % \"2.0.15\", \"io.getquill\" %% \"quill-jdbc-zio\" % \"4.6.1\", \"org.postgresql\" % \"postgresql\" % \"42.5.4\" ) 向resources目录里添加application.conf文件，填写数据库连接配置。\ndb { dataSourceClassName = org.postgresql.ds.PGSimpleDataSource dataSource.user = postgres dataSource.portNumber = 5432 dataSource.password = password connectionTimeout = 30000 } 创建Main.scala作为程序入口，引入ZIODefaultApp。\nimport zio.{Scope, ZIO, ZIOAppArgs, ZIOAppDefault} object Main extends ZIOAppDefault { override def run: ZIO[ZIOAppArgs with Scope, Any, Any] = ??? } 使用quill读取上面的db配置，创建数据源DataSource。这里的ZLayer是zio提供的依赖管理工具，类型参数有三个，第一个代表了依赖的项，第二个代表了创建依赖过程中可能抛出的错误类型，第三个代表了最终创建出的项。这里第一个参数是Any代表不依赖其他任何项就可以创建DataSource。\nval dsLayer: ZLayer[Any, Throwable, DataSource] = Quill.DataSource.fromPrefix(\"db\") 接口创建quill context用于编译和运行时使用。通过ZLayer的类型参数可以很容易地看出它依赖了DataSource才能成功创建quill context。\nval quillLayer: ZLayer[DataSource, Nothing, Quill.Postgres[CompositeNamingStrategy2[SnakeCase, PostgresEscape]]] = Quill.Postgres.fromNamingStrategy(CompositeNamingStrategy2(SnakeCase, PostgresEscape)) 我们通过\u003e\u003e\u003e操作符将上一个ZLayer的结果传递给下一个ZLayer，组合出新的ZLayer。可以看到dsLayer的第三个类型参数与quillLayer的第一类型参数相抵消，我们就得到了一个不需要任何依赖就能创建quill context的ZLayer。\nval contextLayer: ZLayer[Any, Throwable, Quill.Postgres[CompositeNamingStrategy2[SnakeCase, PostgresEscape]]] = dsLayer \u003e\u003e\u003e quillLayer 有了quill context就可以进行数据库访问。假设有这样一张表。\ncreate table \"user\" ( user_id serial primary key, username varchar(255) not null unique, password varchar(255) not null ); 我们可以在程序中创建一个case class映射到这张表上，并通过quill context引入相关数据库操作符。\nfinal case class User(userId: Int, username: String, password: String) final case class UserRepository(quill: Quill.Postgres[CompositeNamingStrategy2[SnakeCase, PostgresEscape]]) { import quill._ override def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User]) } object UserRepository { val layer: ZLayer[Quill.Postgres[CompositeNamingStrategy2[SnakeCase, PostgresEscape]], Nothing, UserRepository] = ZLayer.fromFunction(UserRepository.apply _) } 这里的query[User]会在编译器生成对应的SQL，尝试编译下即可在命令行里看到。\n[info] /zio-http-quill-demo/src/main/scala/example/repository/UserRepository.scala:14:65: SELECT x.\"user_id\" AS userId, x.\"username\" AS username, x.\"password\" AS password FROM \"user\" x [info] override def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User]) 到这里，数据库访问的相关工作已经基本就绪。\nhttp服务 引入依赖\nlibraryDependencies ++= Seq( \"dev.zio\" %% \"zio-http\" % \"3.0.0-RC2\", \"dev.zio\" %% \"zio-json\" % \"0.6.0\", ) zio-http底层使用netty，有较好的性能，编写时也很方便。下面是一个最简单的demo。\nimport zio._ import zio.http._ object Main extends ZIOAppDefault { val app: App[Any] = Http.collect[Request] { case Method.GET -\u003e Root / \"text\" =\u003e Response.text(\"Hello World!\") } override val run = Server.serve(app).provide(Server.default) } 这里通过Http.collect[Request]的方式进行pattern match模式匹配设置路由和对应的处理逻辑。由于我们使用了zio，会换成zio-http提供的Http.collectZio[Request]。\nimport zio.json._ def httpApp(userRepository: UserRepository): Http[Any, Nothing, Request, Response] = { Http.collectZIO[Request] { case Method.GET -\u003e Root / \"user\" / \"list\" =\u003e val response = for { worlds \u003c- userRepository .listUser .mapError(e =\u003e ErrorMsg(\"INTERNAL_ERROR\", e.getMessage)) } yield Response.json(worlds.toJson) response .catchAll(errorMsg =\u003e ZIO.succeed( Response.json(errorMsg.toJson) )) } } 这里展通过访问数据库获取User列表，进行序列化后返回Response。自定义的ErrorMsg代表请求失败时的响应。toJson是zio-json库提供的功能，将case class序化列成json。\n日志 引入依赖\nlibraryDependencies ++= Seq( \"dev.zio\" %% \"zio-logging\" % \"2.1.13\", \"dev.zio\" %% \"zio-logging-slf4j2\" % \"2.1.13\", \"org.slf4j\" % \"slf4j-api\" % \"2.0.7\", \"ch.qos.logback\" % \"logback-classic\" % \"1.4.8\" ) 在Main.scala中将ZIO.log的默认实现替换为zio-logging提供的组件。\nimport zio.logging.backend.SLF4J object Main extends ZIOAppDefault { override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] = Runtime.removeDefaultLoggers \u003e\u003e\u003e SLF4J.slf4j } 日志接口使用slf4j，实现使用logback。同时zio有自己的log操作符，我们添加zio-logging-slf4j2依赖将背后的实现替换为slf4j，这样我们在调用ZIO.log(\"xxx\")时就会使用logback。\nzio-http middleware zio-http middleware是zio-http功能的扩展点，如果我们想要实现打印请求响应、链路追踪、超时和重试等功能，zio-http middleware就是一个非常良好的实现方式。\n简单写一个在response里添加响应时间的middleware并通过@@操作符绑定到httpApp上。\nimport zio.http._ import zio.{Trace, ZIO} class ResponseTimeMiddleware extends RequestHandlerMiddleware.Simple[Any, Nothing] { override def apply[R1 \u003c: Any, Err1 \u003e: Nothing]( handler: Handler[R1, Err1, Request, Response] )(implicit trace: Trace): Handler[R1, Err1, Request, Response] = Handler.fromFunctionZIO[Request] { request =\u003e for { startTime \u003c- ZIO.succeed(System.currentTimeMillis()) response \u003c- handler.runZIO(request) endTime \u003c- ZIO.succeed(System.currentTimeMillis()) } yield response.addHeader(Header.Custom(\"X-Response-Time\", s\"${endTime - startTime}\")) } } object Main extends ZIOAppDefault { override val run = { val responseTimeMiddleware = new ResponseTimeMiddleware() Server.serve(app @@ responseTimeMiddleware).provide(Server.default) } } 实现一个简单的日志链路追踪 日志链路追踪是web后端服务常见的需求之一，我们已经了解了zio-http middleware和zio-logging的基础用法，现在结合二者的能力实现请求级别的日志链路追踪。\n首先要复习下zio中的一个概念ZIOAspect，正如其名字aspect名字“切面”所言，一个ZIOAspect可以包裹住一个ZIO调用并进行某种操作，常见的有日志、重试等。\nimport zio.http._ import zio.logging.LogAnnotation import zio.{Trace, ZIO} import java.util.UUID class LoggingMiddleware extends RequestHandlerMiddleware.Simple[Any, Nothing] { override def apply[R1 \u003c: Any, Err1 \u003e: Nothing]( handler: Handler[R1, Err1, Request, Response] )(implicit trace: Trace): Handler[R1, Err1, Request, Response] = Handler.fromFunctionZIO[Request] { request =\u003e val h = for { _ \u003c- ZIO.log(request.url.path.toString()) response \u003c- handler.runZIO(request) } yield response h @@ LogAnnotation.TraceId(UUID.randomUUID()) } } 这里调用LogAnnotation.TraceId()就是创建了一个ZIOAspect，具体作用是向这个Aspect中的日志上下文添加了traceId=XXX的信息，这样被包裹的ZIO操作中的ZIO.log就可以拿到相关信息并添加到日志中。\n这里日志系统的实现实际使用的是logback，zio-logging会向%kvp中添加我们传递的traceId上下文，我们将%kvp添加进logback.xml的pattern中。\n","wordCount":"2423","inLanguage":"en","datePublished":"2023-07-22T00:53:32+08:00","dateModified":"2023-07-22T00:53:32+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://xiangzi.me/post/20230722-zio-http-quill-postgres/"},"publisher":{"@type":"Organization","name":"箱子的博客","logo":{"@type":"ImageObject","url":"https://xiangzi.me/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://xiangzi.me/ accesskey=h title="箱子的博客 (Alt + H)">箱子的博客</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)"><svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu><li><a href=https://xiangzi.me/ title=Home><span>Home</span></a></li><li><a href=https://xiangzi.me/post/ title=Archives><span>Archives</span></a></li><li><a href=https://xiangzi.me/tags/ title=Tags><span>Tags</span></a></li><li><a href=https://xiangzi.me/categories/ title=Categories><span>Categories</span></a></li><li><a href=https://xiangzi.me/page/about/ title=About><span>About</span></a></li></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class=post-title>使用zio-http, quill与postgres开发web服务</h1><div class=post-meta><span title='2023-07-22 00:53:32 +0800 +0800'>July 22, 2023</span></div></header><div class=post-content><blockquote><p>本文面向有一定<code>scala</code>和<code>zio</code>基础的读者。</p></blockquote><p><a href=https://zio.dev/>zio</a>是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在<code>scala</code>社区中逐渐流行。<a href=https://zio.dev/zio-http/>zio-http</a>是zio生态中的http库，原本是非官方项目，前段时间获得了<code>zio</code>官方支持。<a href=https://zio.dev/zio-quill/>quill</a>是zio生态中的数据库操作库，支持主流关系型数据库，当初转投<code>zio</code>社区还引发了不小的风波。</p><h2 id=访问数据库>访问数据库<a hidden class=anchor aria-hidden=true href=#访问数据库>#</a></h2><p>引入依赖</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span>    libraryDependencies <span style=color:#f92672>++=</span> <span style=color:#a6e22e>Seq</span><span style=color:#f92672>(</span>
-</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;dev.zio&#34;</span> <span style=color:#f92672>%%</span> <span style=color:#e6db74>&#34;zio&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;2.0.15&#34;</span><span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;io.getquill&#34;</span> <span style=color:#f92672>%%</span> <span style=color:#e6db74>&#34;quill-jdbc-zio&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;4.6.1&#34;</span><span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;org.postgresql&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;postgresql&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;42.5.4&#34;</span>
-</span></span><span style=display:flex><span>    <span style=color:#f92672>)</span>
-</span></span></code></pre></div><p>向<code>resources</code>目录里添加<code>application.conf</code>文件，填写数据库连接配置。</p><pre tabindex=0><code>db {
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>使用zio-http, quill与postgres开发web服务 | 箱子的博客</title>
+<meta name="keywords" content="scala">
+<meta name="description" content="本文面向有一定scala和zio基础的读者。 zio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐">
+<meta name="author" content="">
+<link rel="canonical" href="https://xiangzi.me/post/20230722-zio-http-quill-postgres/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.3613efbd0b1772781e8f49935e973cae632a7f61471c05b17be155505ccf87b5.css" integrity="sha256-NhPvvQsXcngej0mTXpc8rmMqf2FHHAWxe&#43;FVUFzPh7U=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://xiangzi.me/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://xiangzi.me/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://xiangzi.me/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://xiangzi.me/apple-touch-icon.png">
+<link rel="mask-icon" href="https://xiangzi.me/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="使用zio-http, quill与postgres开发web服务" />
+<meta property="og:description" content="本文面向有一定scala和zio基础的读者。 zio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://xiangzi.me/post/20230722-zio-http-quill-postgres/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2023-07-22T00:53:32+08:00" />
+<meta property="article:modified_time" content="2023-07-22T00:53:32+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="使用zio-http, quill与postgres开发web服务"/>
+<meta name="twitter:description" content="本文面向有一定scala和zio基础的读者。 zio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://xiangzi.me/post/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "使用zio-http, quill与postgres开发web服务",
+      "item": "https://xiangzi.me/post/20230722-zio-http-quill-postgres/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "使用zio-http, quill与postgres开发web服务",
+  "name": "使用zio-http, quill与postgres开发web服务",
+  "description": "本文面向有一定scala和zio基础的读者。 zio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐",
+  "keywords": [
+    "scala"
+  ],
+  "articleBody": " 本文面向有一定scala和zio基础的读者。\nzio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐渐流行。zio-http是zio生态中的http库，原本是非官方项目，前段时间获得了zio官方支持。quill是zio生态中的数据库操作库，支持主流关系型数据库，当初转投zio社区还引发了不小的风波。\n访问数据库 引入依赖\nlibraryDependencies ++= Seq( \"dev.zio\" %% \"zio\" % \"2.0.15\", \"io.getquill\" %% \"quill-jdbc-zio\" % \"4.6.1\", \"org.postgresql\" % \"postgresql\" % \"42.5.4\" ) 向resources目录里添加application.conf文件，填写数据库连接配置。\ndb { dataSourceClassName = org.postgresql.ds.PGSimpleDataSource dataSource.user = postgres dataSource.portNumber = 5432 dataSource.password = password connectionTimeout = 30000 } 创建Main.scala作为程序入口，引入ZIODefaultApp。\nimport zio.{Scope, ZIO, ZIOAppArgs, ZIOAppDefault} object Main extends ZIOAppDefault { override def run: ZIO[ZIOAppArgs with Scope, Any, Any] = ??? } 使用quill读取上面的db配置，创建数据源DataSource。这里的ZLayer是zio提供的依赖管理工具，类型参数有三个，第一个代表了依赖的项，第二个代表了创建依赖过程中可能抛出的错误类型，第三个代表了最终创建出的项。这里第一个参数是Any代表不依赖其他任何项就可以创建DataSource。\nval dsLayer: ZLayer[Any, Throwable, DataSource] = Quill.DataSource.fromPrefix(\"db\") 接口创建quill context用于编译和运行时使用。通过ZLayer的类型参数可以很容易地看出它依赖了DataSource才能成功创建quill context。\nval quillLayer: ZLayer[DataSource, Nothing, Quill.Postgres[CompositeNamingStrategy2[SnakeCase, PostgresEscape]]] = Quill.Postgres.fromNamingStrategy(CompositeNamingStrategy2(SnakeCase, PostgresEscape)) 我们通过\u003e\u003e\u003e操作符将上一个ZLayer的结果传递给下一个ZLayer，组合出新的ZLayer。可以看到dsLayer的第三个类型参数与quillLayer的第一类型参数相抵消，我们就得到了一个不需要任何依赖就能创建quill context的ZLayer。\nval contextLayer: ZLayer[Any, Throwable, Quill.Postgres[CompositeNamingStrategy2[SnakeCase, PostgresEscape]]] = dsLayer \u003e\u003e\u003e quillLayer 有了quill context就可以进行数据库访问。假设有这样一张表。\ncreate table \"user\" ( user_id serial primary key, username varchar(255) not null unique, password varchar(255) not null ); 我们可以在程序中创建一个case class映射到这张表上，并通过quill context引入相关数据库操作符。\nfinal case class User(userId: Int, username: String, password: String) final case class UserRepository(quill: Quill.Postgres[CompositeNamingStrategy2[SnakeCase, PostgresEscape]]) { import quill._ override def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User]) } object UserRepository { val layer: ZLayer[Quill.Postgres[CompositeNamingStrategy2[SnakeCase, PostgresEscape]], Nothing, UserRepository] = ZLayer.fromFunction(UserRepository.apply _) } 这里的query[User]会在编译器生成对应的SQL，尝试编译下即可在命令行里看到。\n[info] /zio-http-quill-demo/src/main/scala/example/repository/UserRepository.scala:14:65: SELECT x.\"user_id\" AS userId, x.\"username\" AS username, x.\"password\" AS password FROM \"user\" x [info] override def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User]) 到这里，数据库访问的相关工作已经基本就绪。\nhttp服务 引入依赖\nlibraryDependencies ++= Seq( \"dev.zio\" %% \"zio-http\" % \"3.0.0-RC2\", \"dev.zio\" %% \"zio-json\" % \"0.6.0\", ) zio-http底层使用netty，有较好的性能，编写时也很方便。下面是一个最简单的demo。\nimport zio._ import zio.http._ object Main extends ZIOAppDefault { val app: App[Any] = Http.collect[Request] { case Method.GET -\u003e Root / \"text\" =\u003e Response.text(\"Hello World!\") } override val run = Server.serve(app).provide(Server.default) } 这里通过Http.collect[Request]的方式进行pattern match模式匹配设置路由和对应的处理逻辑。由于我们使用了zio，会换成zio-http提供的Http.collectZio[Request]。\nimport zio.json._ def httpApp(userRepository: UserRepository): Http[Any, Nothing, Request, Response] = { Http.collectZIO[Request] { case Method.GET -\u003e Root / \"user\" / \"list\" =\u003e val response = for { worlds \u003c- userRepository .listUser .mapError(e =\u003e ErrorMsg(\"INTERNAL_ERROR\", e.getMessage)) } yield Response.json(worlds.toJson) response .catchAll(errorMsg =\u003e ZIO.succeed( Response.json(errorMsg.toJson) )) } } 这里展通过访问数据库获取User列表，进行序列化后返回Response。自定义的ErrorMsg代表请求失败时的响应。toJson是zio-json库提供的功能，将case class序化列成json。\n日志 引入依赖\nlibraryDependencies ++= Seq( \"dev.zio\" %% \"zio-logging\" % \"2.1.13\", \"dev.zio\" %% \"zio-logging-slf4j2\" % \"2.1.13\", \"org.slf4j\" % \"slf4j-api\" % \"2.0.7\", \"ch.qos.logback\" % \"logback-classic\" % \"1.4.8\" ) 在Main.scala中将ZIO.log的默认实现替换为zio-logging提供的组件。\nimport zio.logging.backend.SLF4J object Main extends ZIOAppDefault { override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] = Runtime.removeDefaultLoggers \u003e\u003e\u003e SLF4J.slf4j } 日志接口使用slf4j，实现使用logback。同时zio有自己的log操作符，我们添加zio-logging-slf4j2依赖将背后的实现替换为slf4j，这样我们在调用ZIO.log(\"xxx\")时就会使用logback。\nzio-http middleware zio-http middleware是zio-http功能的扩展点，如果我们想要实现打印请求响应、链路追踪、超时和重试等功能，zio-http middleware就是一个非常良好的实现方式。\n简单写一个在response里添加响应时间的middleware并通过@@操作符绑定到httpApp上。\nimport zio.http._ import zio.{Trace, ZIO} class ResponseTimeMiddleware extends RequestHandlerMiddleware.Simple[Any, Nothing] { override def apply[R1 \u003c: Any, Err1 \u003e: Nothing]( handler: Handler[R1, Err1, Request, Response] )(implicit trace: Trace): Handler[R1, Err1, Request, Response] = Handler.fromFunctionZIO[Request] { request =\u003e for { startTime \u003c- ZIO.succeed(System.currentTimeMillis()) response \u003c- handler.runZIO(request) endTime \u003c- ZIO.succeed(System.currentTimeMillis()) } yield response.addHeader(Header.Custom(\"X-Response-Time\", s\"${endTime - startTime}\")) } } object Main extends ZIOAppDefault { override val run = { val responseTimeMiddleware = new ResponseTimeMiddleware() Server.serve(app @@ responseTimeMiddleware).provide(Server.default) } } 实现一个简单的日志链路追踪 日志链路追踪是web后端服务常见的需求之一，我们已经了解了zio-http middleware和zio-logging的基础用法，现在结合二者的能力实现请求级别的日志链路追踪。\n首先要复习下zio中的一个概念ZIOAspect，正如其名字aspect名字“切面”所言，一个ZIOAspect可以包裹住一个ZIO调用并进行某种操作，常见的有日志、重试等。\nimport zio.http._ import zio.logging.LogAnnotation import zio.{Trace, ZIO} import java.util.UUID class LoggingMiddleware extends RequestHandlerMiddleware.Simple[Any, Nothing] { override def apply[R1 \u003c: Any, Err1 \u003e: Nothing]( handler: Handler[R1, Err1, Request, Response] )(implicit trace: Trace): Handler[R1, Err1, Request, Response] = Handler.fromFunctionZIO[Request] { request =\u003e val h = for { _ \u003c- ZIO.log(request.url.path.toString()) response \u003c- handler.runZIO(request) } yield response h @@ LogAnnotation.TraceId(UUID.randomUUID()) } } 这里调用LogAnnotation.TraceId()就是创建了一个ZIOAspect，具体作用是向这个Aspect中的日志上下文添加了traceId=XXX的信息，这样被包裹的ZIO操作中的ZIO.log就可以拿到相关信息并添加到日志中。\n这里日志系统的实现实际使用的是logback，zio-logging会向%kvp中添加我们传递的traceId上下文，我们将%kvp添加进logback.xml的pattern中。\n",
+  "wordCount" : "2423",
+  "inLanguage": "en",
+  "datePublished": "2023-07-22T00:53:32+08:00",
+  "dateModified": "2023-07-22T00:53:32+08:00",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://xiangzi.me/post/20230722-zio-http-quill-postgres/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "箱子的博客",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://xiangzi.me/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://xiangzi.me/" accesskey="h" title="箱子的博客 (Alt + H)">箱子的博客</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://xiangzi.me/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://xiangzi.me/post/" title="Archives">
+                    <span>Archives</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://xiangzi.me/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://xiangzi.me/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://xiangzi.me/page/about/" title="About">
+                    <span>About</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title">
+      使用zio-http, quill与postgres开发web服务
+    </h1>
+    <div class="post-meta"><span title='2023-07-22 00:53:32 +0800 +0800'>July 22, 2023</span>
+
+</div>
+  </header> 
+  <div class="post-content"><blockquote>
+<p>本文面向有一定<code>scala</code>和<code>zio</code>基础的读者。</p>
+</blockquote>
+<p><a href="https://zio.dev/">zio</a>是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在<code>scala</code>社区中逐渐流行。<a href="https://zio.dev/zio-http/">zio-http</a>是zio生态中的http库，原本是非官方项目，前段时间获得了<code>zio</code>官方支持。<a href="https://zio.dev/zio-quill/">quill</a>是zio生态中的数据库操作库，支持主流关系型数据库，当初转投<code>zio</code>社区还引发了不小的风波。</p>
+<h2 id="访问数据库">访问数据库<a hidden class="anchor" aria-hidden="true" href="#访问数据库">#</a></h2>
+<p>引入依赖</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span>    libraryDependencies <span style="color:#f92672">++=</span> <span style="color:#a6e22e">Seq</span><span style="color:#f92672">(</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;dev.zio&#34;</span> <span style="color:#f92672">%%</span> <span style="color:#e6db74">&#34;zio&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;2.0.15&#34;</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;io.getquill&#34;</span> <span style="color:#f92672">%%</span> <span style="color:#e6db74">&#34;quill-jdbc-zio&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;4.6.1&#34;</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;org.postgresql&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;postgresql&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;42.5.4&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">)</span>
+</span></span></code></pre></div><p>向<code>resources</code>目录里添加<code>application.conf</code>文件，填写数据库连接配置。</p>
+<pre tabindex="0"><code>db {
   dataSourceClassName = org.postgresql.ds.PGSimpleDataSource
   dataSource.user = postgres
   dataSource.portNumber = 5432
   dataSource.password = password
   connectionTimeout = 30000
 }
-</code></pre><p>创建<code>Main.scala</code>作为程序入口，引入<code>ZIODefaultApp</code>。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>import</span> zio.<span style=color:#f92672>{</span><span style=color:#a6e22e>Scope</span><span style=color:#f92672>,</span> <span style=color:#a6e22e>ZIO</span><span style=color:#f92672>,</span> <span style=color:#a6e22e>ZIOAppArgs</span><span style=color:#f92672>,</span> <span style=color:#a6e22e>ZIOAppDefault</span><span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>object</span> <span style=color:#a6e22e>Main</span> <span style=color:#66d9ef>extends</span> <span style=color:#a6e22e>ZIOAppDefault</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>override</span> <span style=color:#66d9ef>def</span> run<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>ZIO</span><span style=color:#f92672>[</span><span style=color:#66d9ef>ZIOAppArgs</span> <span style=color:#66d9ef>with</span> <span style=color:#66d9ef>Scope</span>, <span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>Any</span><span style=color:#f92672>]</span> <span style=color:#66d9ef>=</span> <span style=color:#f92672>???</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
-</span></span></code></pre></div><p>使用<code>quill</code>读取上面的db配置，创建数据源<code>DataSource</code>。这里的<code>ZLayer</code>是<code>zio</code>提供的依赖管理工具，类型参数有三个，第一个代表了依赖的项，第二个代表了创建依赖过程中可能抛出的错误类型，第三个代表了最终创建出的项。这里第一个参数是<code>Any</code>代表不依赖其他任何项就可以创建<code>DataSource</code>。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>val</span> dsLayer<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>ZLayer</span><span style=color:#f92672>[</span><span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>Throwable</span>, <span style=color:#66d9ef>DataSource</span><span style=color:#f92672>]</span> <span style=color:#66d9ef>=</span> <span style=color:#a6e22e>Quill</span><span style=color:#f92672>.</span><span style=color:#a6e22e>DataSource</span><span style=color:#f92672>.</span>fromPrefix<span style=color:#f92672>(</span><span style=color:#e6db74>&#34;db&#34;</span><span style=color:#f92672>)</span>
-</span></span></code></pre></div><p>接口创建<code>quill context</code>用于编译和运行时使用。通过ZLayer的类型参数可以很容易地看出它依赖了<code>DataSource</code>才能成功创建<code>quill context</code>。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>val</span> quillLayer<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>ZLayer</span><span style=color:#f92672>[</span><span style=color:#66d9ef>DataSource</span>, <span style=color:#66d9ef>Nothing</span>, <span style=color:#66d9ef>Quill.Postgres</span><span style=color:#f92672>[</span><span style=color:#66d9ef>CompositeNamingStrategy2</span><span style=color:#f92672>[</span><span style=color:#66d9ef>SnakeCase</span>, <span style=color:#66d9ef>PostgresEscape</span><span style=color:#f92672>]]]</span> <span style=color:#66d9ef>=</span>
-</span></span><span style=display:flex><span>      <span style=color:#a6e22e>Quill</span><span style=color:#f92672>.</span><span style=color:#a6e22e>Postgres</span><span style=color:#f92672>.</span>fromNamingStrategy<span style=color:#f92672>(</span><span style=color:#a6e22e>CompositeNamingStrategy2</span><span style=color:#f92672>(</span><span style=color:#a6e22e>SnakeCase</span><span style=color:#f92672>,</span> <span style=color:#a6e22e>PostgresEscape</span><span style=color:#f92672>))</span>
-</span></span></code></pre></div><p>我们通过<code>>>></code>操作符将上一个<code>ZLayer</code>的结果传递给下一个<code>ZLayer</code>，组合出新的<code>ZLayer</code>。可以看到<code>dsLayer</code>的第三个类型参数与<code>quillLayer</code>的第一类型参数相抵消，我们就得到了一个不需要任何依赖就能创建<code>quill context</code>的<code>ZLayer</code>。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>val</span> contextLayer<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>ZLayer</span><span style=color:#f92672>[</span><span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>Throwable</span>, <span style=color:#66d9ef>Quill.Postgres</span><span style=color:#f92672>[</span><span style=color:#66d9ef>CompositeNamingStrategy2</span><span style=color:#f92672>[</span><span style=color:#66d9ef>SnakeCase</span>, <span style=color:#66d9ef>PostgresEscape</span><span style=color:#f92672>]]]</span> <span style=color:#66d9ef>=</span>
-</span></span><span style=display:flex><span>  dsLayer <span style=color:#f92672>&gt;&gt;&gt;</span> quillLayer
-</span></span></code></pre></div><p>有了<code>quill context</code>就可以进行数据库访问。假设有这样一张表。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-sql data-lang=sql><span style=display:flex><span><span style=color:#66d9ef>create</span> <span style=color:#66d9ef>table</span> <span style=color:#e6db74>&#34;user&#34;</span>
-</span></span><span style=display:flex><span>(
-</span></span><span style=display:flex><span>    user_id  serial <span style=color:#66d9ef>primary</span> <span style=color:#66d9ef>key</span>,
-</span></span><span style=display:flex><span>    username varchar(<span style=color:#ae81ff>255</span>) <span style=color:#66d9ef>not</span> <span style=color:#66d9ef>null</span> <span style=color:#66d9ef>unique</span>,
-</span></span><span style=display:flex><span>    password varchar(<span style=color:#ae81ff>255</span>) <span style=color:#66d9ef>not</span> <span style=color:#66d9ef>null</span>
-</span></span><span style=display:flex><span>);
-</span></span></code></pre></div><p>我们可以在程序中创建一个<code>case class</code>映射到这张表上，并通过<code>quill context</code>引入相关数据库操作符。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>final</span> <span style=color:#66d9ef>case</span> <span style=color:#66d9ef>class</span> <span style=color:#a6e22e>User</span><span style=color:#f92672>(</span>userId<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>Int</span><span style=color:#f92672>,</span> username<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>String</span><span style=color:#f92672>,</span> password<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>String</span><span style=color:#f92672>)</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>final</span> <span style=color:#66d9ef>case</span> <span style=color:#66d9ef>class</span> <span style=color:#a6e22e>UserRepository</span><span style=color:#f92672>(</span>quill<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>Quill.Postgres</span><span style=color:#f92672>[</span><span style=color:#66d9ef>CompositeNamingStrategy2</span><span style=color:#f92672>[</span><span style=color:#66d9ef>SnakeCase</span>, <span style=color:#66d9ef>PostgresEscape</span><span style=color:#f92672>]])</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>import</span> quill._
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>override</span> <span style=color:#66d9ef>def</span> listUser<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>ZIO</span><span style=color:#f92672>[</span><span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>SQLException</span>, <span style=color:#66d9ef>Seq</span><span style=color:#f92672>[</span><span style=color:#66d9ef>User</span><span style=color:#f92672>]]</span> <span style=color:#66d9ef>=</span> run<span style=color:#f92672>(</span>query<span style=color:#f92672>[</span><span style=color:#66d9ef>User</span><span style=color:#f92672>])</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>object</span> <span style=color:#a6e22e>UserRepository</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>val</span> layer<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>ZLayer</span><span style=color:#f92672>[</span><span style=color:#66d9ef>Quill.Postgres</span><span style=color:#f92672>[</span><span style=color:#66d9ef>CompositeNamingStrategy2</span><span style=color:#f92672>[</span><span style=color:#66d9ef>SnakeCase</span>, <span style=color:#66d9ef>PostgresEscape</span><span style=color:#f92672>]]</span>, <span style=color:#66d9ef>Nothing</span>, <span style=color:#66d9ef>UserRepository</span><span style=color:#f92672>]</span> <span style=color:#66d9ef>=</span>
-</span></span><span style=display:flex><span>    <span style=color:#a6e22e>ZLayer</span><span style=color:#f92672>.</span>fromFunction<span style=color:#f92672>(</span><span style=color:#a6e22e>UserRepository</span><span style=color:#f92672>.</span>apply <span style=color:#66d9ef>_</span><span style=color:#f92672>)</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
-</span></span></code></pre></div><p>这里的<code>query[User]</code>会在编译器生成对应的SQL，尝试编译下即可在命令行里看到。</p><pre tabindex=0><code>[info] /zio-http-quill-demo/src/main/scala/example/repository/UserRepository.scala:14:65: SELECT x.&#34;user_id&#34; AS userId, x.&#34;username&#34; AS username, x.&#34;password&#34; AS password FROM &#34;user&#34; x
+</code></pre><p>创建<code>Main.scala</code>作为程序入口，引入<code>ZIODefaultApp</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio.<span style="color:#f92672">{</span><span style="color:#a6e22e">Scope</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ZIO</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ZIOAppArgs</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ZIOAppDefault</span><span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">object</span> <span style="color:#a6e22e">Main</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">ZIOAppDefault</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">def</span> run<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ZIO</span><span style="color:#f92672">[</span><span style="color:#66d9ef">ZIOAppArgs</span> <span style="color:#66d9ef">with</span> <span style="color:#66d9ef">Scope</span>, <span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">Any</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> <span style="color:#f92672">???</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p>使用<code>quill</code>读取上面的db配置，创建数据源<code>DataSource</code>。这里的<code>ZLayer</code>是<code>zio</code>提供的依赖管理工具，类型参数有三个，第一个代表了依赖的项，第二个代表了创建依赖过程中可能抛出的错误类型，第三个代表了最终创建出的项。这里第一个参数是<code>Any</code>代表不依赖其他任何项就可以创建<code>DataSource</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">val</span> dsLayer<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ZLayer</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">Throwable</span>, <span style="color:#66d9ef">DataSource</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">Quill</span><span style="color:#f92672">.</span><span style="color:#a6e22e">DataSource</span><span style="color:#f92672">.</span>fromPrefix<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;db&#34;</span><span style="color:#f92672">)</span>
+</span></span></code></pre></div><p>接口创建<code>quill context</code>用于编译和运行时使用。通过ZLayer的类型参数可以很容易地看出它依赖了<code>DataSource</code>才能成功创建<code>quill context</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">val</span> quillLayer<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ZLayer</span><span style="color:#f92672">[</span><span style="color:#66d9ef">DataSource</span>, <span style="color:#66d9ef">Nothing</span>, <span style="color:#66d9ef">Quill.Postgres</span><span style="color:#f92672">[</span><span style="color:#66d9ef">CompositeNamingStrategy2</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SnakeCase</span>, <span style="color:#66d9ef">PostgresEscape</span><span style="color:#f92672">]]]</span> <span style="color:#66d9ef">=</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#a6e22e">Quill</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Postgres</span><span style="color:#f92672">.</span>fromNamingStrategy<span style="color:#f92672">(</span><span style="color:#a6e22e">CompositeNamingStrategy2</span><span style="color:#f92672">(</span><span style="color:#a6e22e">SnakeCase</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">PostgresEscape</span><span style="color:#f92672">))</span>
+</span></span></code></pre></div><p>我们通过<code>&gt;&gt;&gt;</code>操作符将上一个<code>ZLayer</code>的结果传递给下一个<code>ZLayer</code>，组合出新的<code>ZLayer</code>。可以看到<code>dsLayer</code>的第三个类型参数与<code>quillLayer</code>的第一类型参数相抵消，我们就得到了一个不需要任何依赖就能创建<code>quill context</code>的<code>ZLayer</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">val</span> contextLayer<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ZLayer</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">Throwable</span>, <span style="color:#66d9ef">Quill.Postgres</span><span style="color:#f92672">[</span><span style="color:#66d9ef">CompositeNamingStrategy2</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SnakeCase</span>, <span style="color:#66d9ef">PostgresEscape</span><span style="color:#f92672">]]]</span> <span style="color:#66d9ef">=</span>
+</span></span><span style="display:flex;"><span>  dsLayer <span style="color:#f92672">&gt;&gt;&gt;</span> quillLayer
+</span></span></code></pre></div><p>有了<code>quill context</code>就可以进行数据库访问。假设有这样一张表。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">table</span> <span style="color:#e6db74">&#34;user&#34;</span>
+</span></span><span style="display:flex;"><span>(
+</span></span><span style="display:flex;"><span>    user_id  serial <span style="color:#66d9ef">primary</span> <span style="color:#66d9ef">key</span>,
+</span></span><span style="display:flex;"><span>    username varchar(<span style="color:#ae81ff">255</span>) <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">null</span> <span style="color:#66d9ef">unique</span>,
+</span></span><span style="display:flex;"><span>    password varchar(<span style="color:#ae81ff">255</span>) <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">null</span>
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><p>我们可以在程序中创建一个<code>case class</code>映射到这张表上，并通过<code>quill context</code>引入相关数据库操作符。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">final</span> <span style="color:#66d9ef">case</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">User</span><span style="color:#f92672">(</span>userId<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Int</span><span style="color:#f92672">,</span> username<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span><span style="color:#f92672">,</span> password<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">final</span> <span style="color:#66d9ef">case</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">UserRepository</span><span style="color:#f92672">(</span>quill<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Quill.Postgres</span><span style="color:#f92672">[</span><span style="color:#66d9ef">CompositeNamingStrategy2</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SnakeCase</span>, <span style="color:#66d9ef">PostgresEscape</span><span style="color:#f92672">]])</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">import</span> quill._
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">def</span> listUser<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ZIO</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">SQLException</span>, <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">User</span><span style="color:#f92672">]]</span> <span style="color:#66d9ef">=</span> run<span style="color:#f92672">(</span>query<span style="color:#f92672">[</span><span style="color:#66d9ef">User</span><span style="color:#f92672">])</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">object</span> <span style="color:#a6e22e">UserRepository</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">val</span> layer<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ZLayer</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Quill.Postgres</span><span style="color:#f92672">[</span><span style="color:#66d9ef">CompositeNamingStrategy2</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SnakeCase</span>, <span style="color:#66d9ef">PostgresEscape</span><span style="color:#f92672">]]</span>, <span style="color:#66d9ef">Nothing</span>, <span style="color:#66d9ef">UserRepository</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ZLayer</span><span style="color:#f92672">.</span>fromFunction<span style="color:#f92672">(</span><span style="color:#a6e22e">UserRepository</span><span style="color:#f92672">.</span>apply <span style="color:#66d9ef">_</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p>这里的<code>query[User]</code>会在编译器生成对应的SQL，尝试编译下即可在命令行里看到。</p>
+<pre tabindex="0"><code>[info] /zio-http-quill-demo/src/main/scala/example/repository/UserRepository.scala:14:65: SELECT x.&#34;user_id&#34; AS userId, x.&#34;username&#34; AS username, x.&#34;password&#34; AS password FROM &#34;user&#34; x
 [info]   override def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User])
-</code></pre><p>到这里，数据库访问的相关工作已经基本就绪。</p><h2 id=http服务>http服务<a hidden class=anchor aria-hidden=true href=#http服务>#</a></h2><p>引入依赖</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span>    libraryDependencies <span style=color:#f92672>++=</span> <span style=color:#a6e22e>Seq</span><span style=color:#f92672>(</span>
-</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;dev.zio&#34;</span> <span style=color:#f92672>%%</span> <span style=color:#e6db74>&#34;zio-http&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;3.0.0-RC2&#34;</span><span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;dev.zio&#34;</span> <span style=color:#f92672>%%</span> <span style=color:#e6db74>&#34;zio-json&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;0.6.0&#34;</span><span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>    <span style=color:#f92672>)</span>
-</span></span></code></pre></div><p><code>zio-http</code>底层使用<code>netty</code>，有较好的性能，编写时也很方便。下面是一个最简单的demo。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>import</span> zio._
-</span></span><span style=display:flex><span><span style=color:#66d9ef>import</span> zio.http._
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>object</span> <span style=color:#a6e22e>Main</span> <span style=color:#66d9ef>extends</span> <span style=color:#a6e22e>ZIOAppDefault</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>val</span> app<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>App</span><span style=color:#f92672>[</span><span style=color:#66d9ef>Any</span><span style=color:#f92672>]</span> <span style=color:#66d9ef>=</span> 
-</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Http</span><span style=color:#f92672>.</span>collect<span style=color:#f92672>[</span><span style=color:#66d9ef>Request</span><span style=color:#f92672>]</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>      <span style=color:#66d9ef>case</span> <span style=color:#a6e22e>Method</span><span style=color:#f92672>.</span><span style=color:#a6e22e>GET</span> <span style=color:#f92672>-&gt;</span> <span style=color:#a6e22e>Root</span> <span style=color:#f92672>/</span> <span style=color:#e6db74>&#34;text&#34;</span> <span style=color:#66d9ef>=&gt;</span> <span style=color:#a6e22e>Response</span><span style=color:#f92672>.</span>text<span style=color:#f92672>(</span><span style=color:#e6db74>&#34;Hello World!&#34;</span><span style=color:#f92672>)</span>
-</span></span><span style=display:flex><span>    <span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>override</span> <span style=color:#66d9ef>val</span> run <span style=color:#66d9ef>=</span>
-</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Server</span><span style=color:#f92672>.</span>serve<span style=color:#f92672>(</span>app<span style=color:#f92672>).</span>provide<span style=color:#f92672>(</span><span style=color:#a6e22e>Server</span><span style=color:#f92672>.</span>default<span style=color:#f92672>)</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
-</span></span></code></pre></div><p>这里通过<code>Http.collect[Request]</code>的方式进行<code>pattern match</code>模式匹配设置路由和对应的处理逻辑。由于我们使用了<code>zio</code>，会换成<code>zio-http</code>提供的<code>Http.collectZio[Request]</code>。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>import</span> zio.json._
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> httpApp<span style=color:#f92672>(</span>userRepository<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>UserRepository</span><span style=color:#f92672>)</span><span style=color:#66d9ef>:</span> <span style=color:#66d9ef>Http</span><span style=color:#f92672>[</span><span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>Nothing</span>, <span style=color:#66d9ef>Request</span>, <span style=color:#66d9ef>Response</span><span style=color:#f92672>]</span> <span style=color:#66d9ef>=</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>  <span style=color:#a6e22e>Http</span><span style=color:#f92672>.</span>collectZIO<span style=color:#f92672>[</span><span style=color:#66d9ef>Request</span><span style=color:#f92672>]</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>case</span> <span style=color:#a6e22e>Method</span><span style=color:#f92672>.</span><span style=color:#a6e22e>GET</span> <span style=color:#f92672>-&gt;</span> <span style=color:#a6e22e>Root</span> <span style=color:#f92672>/</span> <span style=color:#e6db74>&#34;user&#34;</span> <span style=color:#f92672>/</span> <span style=color:#e6db74>&#34;list&#34;</span> <span style=color:#66d9ef>=&gt;</span>
-</span></span><span style=display:flex><span>      <span style=color:#66d9ef>val</span> response <span style=color:#66d9ef>=</span> <span style=color:#66d9ef>for</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>        worlds <span style=color:#66d9ef>&lt;-</span> userRepository
-</span></span><span style=display:flex><span>          <span style=color:#f92672>.</span>listUser
-</span></span><span style=display:flex><span>          <span style=color:#f92672>.</span>mapError<span style=color:#f92672>(</span>e <span style=color:#66d9ef>=&gt;</span> <span style=color:#a6e22e>ErrorMsg</span><span style=color:#f92672>(</span><span style=color:#e6db74>&#34;INTERNAL_ERROR&#34;</span><span style=color:#f92672>,</span> e<span style=color:#f92672>.</span>getMessage<span style=color:#f92672>))</span>
-</span></span><span style=display:flex><span>      <span style=color:#f92672>}</span> <span style=color:#66d9ef>yield</span> <span style=color:#a6e22e>Response</span><span style=color:#f92672>.</span>json<span style=color:#f92672>(</span>worlds<span style=color:#f92672>.</span>toJson<span style=color:#f92672>)</span>
-</span></span><span style=display:flex><span>      response
-</span></span><span style=display:flex><span>        <span style=color:#f92672>.</span>catchAll<span style=color:#f92672>(</span>errorMsg <span style=color:#66d9ef>=&gt;</span> <span style=color:#a6e22e>ZIO</span><span style=color:#f92672>.</span>succeed<span style=color:#f92672>(</span>
-</span></span><span style=display:flex><span>          <span style=color:#a6e22e>Response</span><span style=color:#f92672>.</span>json<span style=color:#f92672>(</span>errorMsg<span style=color:#f92672>.</span>toJson<span style=color:#f92672>)</span>
-</span></span><span style=display:flex><span>        <span style=color:#f92672>))</span>
-</span></span><span style=display:flex><span>  <span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
-</span></span></code></pre></div><p>这里展通过访问数据库获取<code>User</code>列表，进行序列化后返回<code>Response</code>。自定义的<code>ErrorMsg</code>代表请求失败时的响应。<code>toJson</code>是<code>zio-json</code>库提供的功能，将<code>case class</code>序化列成<code>json</code>。</p><h2 id=日志>日志<a hidden class=anchor aria-hidden=true href=#日志>#</a></h2><p>引入依赖</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span>    libraryDependencies <span style=color:#f92672>++=</span> <span style=color:#a6e22e>Seq</span><span style=color:#f92672>(</span>
-</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;dev.zio&#34;</span> <span style=color:#f92672>%%</span> <span style=color:#e6db74>&#34;zio-logging&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;2.1.13&#34;</span><span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;dev.zio&#34;</span> <span style=color:#f92672>%%</span> <span style=color:#e6db74>&#34;zio-logging-slf4j2&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;2.1.13&#34;</span><span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;org.slf4j&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;slf4j-api&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;2.0.7&#34;</span><span style=color:#f92672>,</span>
-</span></span><span style=display:flex><span>      <span style=color:#e6db74>&#34;ch.qos.logback&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;logback-classic&#34;</span> <span style=color:#f92672>%</span> <span style=color:#e6db74>&#34;1.4.8&#34;</span>
-</span></span><span style=display:flex><span>    <span style=color:#f92672>)</span>
-</span></span></code></pre></div><p>在<code>Main.scala</code>中将<code>ZIO.log</code>的默认实现替换为<code>zio-logging</code>提供的组件。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>import</span> zio.logging.backend.SLF4J
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>object</span> <span style=color:#a6e22e>Main</span> <span style=color:#66d9ef>extends</span> <span style=color:#a6e22e>ZIOAppDefault</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>override</span> <span style=color:#66d9ef>val</span> bootstrap<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>ZLayer</span><span style=color:#f92672>[</span><span style=color:#66d9ef>ZIOAppArgs</span>, <span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>Any</span><span style=color:#f92672>]</span> <span style=color:#66d9ef>=</span>
-</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Runtime</span><span style=color:#f92672>.</span>removeDefaultLoggers <span style=color:#f92672>&gt;&gt;&gt;</span> <span style=color:#a6e22e>SLF4J</span><span style=color:#f92672>.</span>slf4j
-</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
-</span></span></code></pre></div><p>日志接口使用<code>slf4j</code>，实现使用<code>logback</code>。同时<code>zio</code>有自己的<code>log</code>操作符，我们添加<code>zio-logging-slf4j2</code>依赖将背后的实现替换为<code>slf4j</code>，这样我们在调用<code>ZIO.log("xxx")</code>时就会使用<code>logback</code>。</p><h2 id=zio-http-middleware>zio-http middleware<a hidden class=anchor aria-hidden=true href=#zio-http-middleware>#</a></h2><p><code>zio-http middleware</code>是<code>zio-http</code>功能的扩展点，如果我们想要实现打印请求响应、链路追踪、超时和重试等功能，<code>zio-http middleware</code>就是一个非常良好的实现方式。</p><p>简单写一个在<code>response</code>里添加响应时间的<code>middleware</code>并通过<code>@@</code>操作符绑定到<code>httpApp</code>上。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>import</span> zio.http._
-</span></span><span style=display:flex><span><span style=color:#66d9ef>import</span> zio.<span style=color:#f92672>{</span><span style=color:#a6e22e>Trace</span><span style=color:#f92672>,</span> <span style=color:#a6e22e>ZIO</span><span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>ResponseTimeMiddleware</span> <span style=color:#66d9ef>extends</span> <span style=color:#a6e22e>RequestHandlerMiddleware</span><span style=color:#f92672>.</span><span style=color:#a6e22e>Simple</span><span style=color:#f92672>[</span><span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>Nothing</span><span style=color:#f92672>]</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>override</span> <span style=color:#66d9ef>def</span> apply<span style=color:#f92672>[</span><span style=color:#66d9ef>R1</span> <span style=color:#66d9ef>&lt;:</span> <span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>Err1</span> <span style=color:#66d9ef>&gt;:</span> <span style=color:#66d9ef>Nothing</span><span style=color:#f92672>](</span>
-</span></span><span style=display:flex><span>      handler<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>Handler</span><span style=color:#f92672>[</span><span style=color:#66d9ef>R1</span>, <span style=color:#66d9ef>Err1</span>, <span style=color:#66d9ef>Request</span>, <span style=color:#66d9ef>Response</span><span style=color:#f92672>]</span>
-</span></span><span style=display:flex><span>  <span style=color:#f92672>)(</span><span style=color:#66d9ef>implicit</span> trace<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>Trace</span><span style=color:#f92672>)</span><span style=color:#66d9ef>:</span> <span style=color:#66d9ef>Handler</span><span style=color:#f92672>[</span><span style=color:#66d9ef>R1</span>, <span style=color:#66d9ef>Err1</span>, <span style=color:#66d9ef>Request</span>, <span style=color:#66d9ef>Response</span><span style=color:#f92672>]</span> <span style=color:#66d9ef>=</span>
-</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Handler</span><span style=color:#f92672>.</span>fromFunctionZIO<span style=color:#f92672>[</span><span style=color:#66d9ef>Request</span><span style=color:#f92672>]</span> <span style=color:#f92672>{</span> request <span style=color:#66d9ef>=&gt;</span>
-</span></span><span style=display:flex><span>      <span style=color:#66d9ef>for</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>        startTime <span style=color:#66d9ef>&lt;-</span> <span style=color:#a6e22e>ZIO</span><span style=color:#f92672>.</span>succeed<span style=color:#f92672>(</span><span style=color:#a6e22e>System</span><span style=color:#f92672>.</span>currentTimeMillis<span style=color:#f92672>())</span>
-</span></span><span style=display:flex><span>        response <span style=color:#66d9ef>&lt;-</span> handler<span style=color:#f92672>.</span>runZIO<span style=color:#f92672>(</span>request<span style=color:#f92672>)</span>
-</span></span><span style=display:flex><span>        endTime <span style=color:#66d9ef>&lt;-</span> <span style=color:#a6e22e>ZIO</span><span style=color:#f92672>.</span>succeed<span style=color:#f92672>(</span><span style=color:#a6e22e>System</span><span style=color:#f92672>.</span>currentTimeMillis<span style=color:#f92672>())</span>
-</span></span><span style=display:flex><span>      <span style=color:#f92672>}</span> <span style=color:#66d9ef>yield</span> response<span style=color:#f92672>.</span>addHeader<span style=color:#f92672>(</span><span style=color:#a6e22e>Header</span><span style=color:#f92672>.</span><span style=color:#a6e22e>Custom</span><span style=color:#f92672>(</span><span style=color:#e6db74>&#34;X-Response-Time&#34;</span><span style=color:#f92672>,</span> <span style=color:#e6db74>s&#34;</span><span style=color:#e6db74>${</span>endTime <span style=color:#f92672>-</span> startTime<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span><span style=color:#f92672>))</span>
-</span></span><span style=display:flex><span>    <span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>object</span> <span style=color:#a6e22e>Main</span> <span style=color:#66d9ef>extends</span> <span style=color:#a6e22e>ZIOAppDefault</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>override</span> <span style=color:#66d9ef>val</span> run <span style=color:#66d9ef>=</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>val</span> responseTimeMiddleware <span style=color:#66d9ef>=</span> <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>ResponseTimeMiddleware</span><span style=color:#f92672>()</span>
-</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Server</span><span style=color:#f92672>.</span>serve<span style=color:#f92672>(</span>app <span style=color:#f92672>@@</span> responseTimeMiddleware<span style=color:#f92672>).</span>provide<span style=color:#f92672>(</span><span style=color:#a6e22e>Server</span><span style=color:#f92672>.</span>default<span style=color:#f92672>)</span>
-</span></span><span style=display:flex><span>  <span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
-</span></span></code></pre></div><h2 id=实现一个简单的日志链路追踪>实现一个简单的日志链路追踪<a hidden class=anchor aria-hidden=true href=#实现一个简单的日志链路追踪>#</a></h2><p>日志链路追踪是web后端服务常见的需求之一，我们已经了解了<code>zio-http middleware</code>和<code>zio-logging</code>的基础用法，现在结合二者的能力实现请求级别的日志链路追踪。</p><p>首先要复习下<code>zio</code>中的一个概念<code>ZIOAspect</code>，正如其名字aspect名字“切面”所言，一个<code>ZIOAspect</code>可以包裹住一个<code>ZIO</code>调用并进行某种操作，常见的有日志、重试等。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-scala data-lang=scala><span style=display:flex><span><span style=color:#66d9ef>import</span> zio.http._
-</span></span><span style=display:flex><span><span style=color:#66d9ef>import</span> zio.logging.LogAnnotation
-</span></span><span style=display:flex><span><span style=color:#66d9ef>import</span> zio.<span style=color:#f92672>{</span><span style=color:#a6e22e>Trace</span><span style=color:#f92672>,</span> <span style=color:#a6e22e>ZIO</span><span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>import</span> java.util.UUID
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>class</span> <span style=color:#a6e22e>LoggingMiddleware</span> <span style=color:#66d9ef>extends</span> <span style=color:#a6e22e>RequestHandlerMiddleware</span><span style=color:#f92672>.</span><span style=color:#a6e22e>Simple</span><span style=color:#f92672>[</span><span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>Nothing</span><span style=color:#f92672>]</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>override</span> <span style=color:#66d9ef>def</span> apply<span style=color:#f92672>[</span><span style=color:#66d9ef>R1</span> <span style=color:#66d9ef>&lt;:</span> <span style=color:#66d9ef>Any</span>, <span style=color:#66d9ef>Err1</span> <span style=color:#66d9ef>&gt;:</span> <span style=color:#66d9ef>Nothing</span><span style=color:#f92672>](</span>
-</span></span><span style=display:flex><span>      handler<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>Handler</span><span style=color:#f92672>[</span><span style=color:#66d9ef>R1</span>, <span style=color:#66d9ef>Err1</span>, <span style=color:#66d9ef>Request</span>, <span style=color:#66d9ef>Response</span><span style=color:#f92672>]</span>
-</span></span><span style=display:flex><span>  <span style=color:#f92672>)(</span><span style=color:#66d9ef>implicit</span> trace<span style=color:#66d9ef>:</span> <span style=color:#66d9ef>Trace</span><span style=color:#f92672>)</span><span style=color:#66d9ef>:</span> <span style=color:#66d9ef>Handler</span><span style=color:#f92672>[</span><span style=color:#66d9ef>R1</span>, <span style=color:#66d9ef>Err1</span>, <span style=color:#66d9ef>Request</span>, <span style=color:#66d9ef>Response</span><span style=color:#f92672>]</span> <span style=color:#66d9ef>=</span>
-</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Handler</span><span style=color:#f92672>.</span>fromFunctionZIO<span style=color:#f92672>[</span><span style=color:#66d9ef>Request</span><span style=color:#f92672>]</span> <span style=color:#f92672>{</span> request <span style=color:#66d9ef>=&gt;</span>
-</span></span><span style=display:flex><span>      <span style=color:#66d9ef>val</span> h <span style=color:#66d9ef>=</span> <span style=color:#66d9ef>for</span> <span style=color:#f92672>{</span>
-</span></span><span style=display:flex><span>        <span style=color:#66d9ef>_</span> <span style=color:#66d9ef>&lt;-</span> <span style=color:#a6e22e>ZIO</span><span style=color:#f92672>.</span>log<span style=color:#f92672>(</span>request<span style=color:#f92672>.</span>url<span style=color:#f92672>.</span>path<span style=color:#f92672>.</span>toString<span style=color:#f92672>())</span>
-</span></span><span style=display:flex><span>        response <span style=color:#66d9ef>&lt;-</span> handler<span style=color:#f92672>.</span>runZIO<span style=color:#f92672>(</span>request<span style=color:#f92672>)</span>
-</span></span><span style=display:flex><span>      <span style=color:#f92672>}</span> <span style=color:#66d9ef>yield</span> response
-</span></span><span style=display:flex><span>      h <span style=color:#f92672>@@</span> <span style=color:#a6e22e>LogAnnotation</span><span style=color:#f92672>.</span><span style=color:#a6e22e>TraceId</span><span style=color:#f92672>(</span><span style=color:#a6e22e>UUID</span><span style=color:#f92672>.</span>randomUUID<span style=color:#f92672>())</span>
-</span></span><span style=display:flex><span>    <span style=color:#f92672>}</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
-</span></span></code></pre></div><p>这里调用<code>LogAnnotation.TraceId()</code>就是创建了一个<code>ZIOAspect</code>，具体作用是向这个<code>Aspect</code>中的日志上下文添加了<code>traceId=XXX</code>的信息，这样被包裹的<code>ZIO</code>操作中的<code>ZIO.log</code>就可以拿到相关信息并添加到日志中。</p><p>这里日志系统的实现实际使用的是<code>logback</code>，<code>zio-logging</code>会向<code>%kvp</code>中添加我们传递的<code>traceId</code>上下文，我们将<code>%kvp</code>添加进<code>logback.xml</code>的<code>pattern</code>中。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-xml data-lang=xml><span style=display:flex><span><span style=color:#f92672>&lt;configuration&gt;</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>&lt;appender</span> <span style=color:#a6e22e>name=</span><span style=color:#e6db74>&#34;STDOUT&#34;</span> <span style=color:#a6e22e>class=</span><span style=color:#e6db74>&#34;ch.qos.logback.core.ConsoleAppender&#34;</span><span style=color:#f92672>&gt;</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>&lt;encoder&gt;</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>&lt;pattern&gt;</span>[%level] [%kvp] - %msg %n<span style=color:#f92672>&lt;/pattern&gt;</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>&lt;/encoder&gt;</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>&lt;/appender&gt;</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>&lt;root</span> <span style=color:#a6e22e>level=</span><span style=color:#e6db74>&#34;INFO&#34;</span><span style=color:#f92672>&gt;</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>&lt;appender-ref</span> <span style=color:#a6e22e>ref=</span><span style=color:#e6db74>&#34;STDOUT&#34;</span><span style=color:#f92672>/&gt;</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>&lt;/root&gt;</span>
-</span></span><span style=display:flex><span><span style=color:#f92672>&lt;/configuration&gt;</span>
-</span></span></code></pre></div><p>添加后，我们发起请求后就可以看到携带有<code>traceId</code>的日志，第一条日志是<code>middleware</code>打印的。并且我们在<code>Http.collectZIO[Request]</code>中调用<code>ZIO.log</code>也会打印<code>traceId</code>，因为已经被<code>ZIOAspect</code>包裹起来了，可以拿到上下文，第二条日志就是如此。</p><pre tabindex=0><code>[INFO] [trace_id=&#34;2dbf5bd2-a856-4d21-945c-b42a08f3bdc0&#34;] - /user/list
+</code></pre><p>到这里，数据库访问的相关工作已经基本就绪。</p>
+<h2 id="http服务">http服务<a hidden class="anchor" aria-hidden="true" href="#http服务">#</a></h2>
+<p>引入依赖</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span>    libraryDependencies <span style="color:#f92672">++=</span> <span style="color:#a6e22e">Seq</span><span style="color:#f92672">(</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;dev.zio&#34;</span> <span style="color:#f92672">%%</span> <span style="color:#e6db74">&#34;zio-http&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;3.0.0-RC2&#34;</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;dev.zio&#34;</span> <span style="color:#f92672">%%</span> <span style="color:#e6db74">&#34;zio-json&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;0.6.0&#34;</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">)</span>
+</span></span></code></pre></div><p><code>zio-http</code>底层使用<code>netty</code>，有较好的性能，编写时也很方便。下面是一个最简单的demo。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio._
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio.http._
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">object</span> <span style="color:#a6e22e">Main</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">ZIOAppDefault</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">val</span> app<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">App</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Any</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Http</span><span style="color:#f92672">.</span>collect<span style="color:#f92672">[</span><span style="color:#66d9ef">Request</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">Method</span><span style="color:#f92672">.</span><span style="color:#a6e22e">GET</span> <span style="color:#f92672">-&gt;</span> <span style="color:#a6e22e">Root</span> <span style="color:#f92672">/</span> <span style="color:#e6db74">&#34;text&#34;</span> <span style="color:#66d9ef">=&gt;</span> <span style="color:#a6e22e">Response</span><span style="color:#f92672">.</span>text<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;Hello World!&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">val</span> run <span style="color:#66d9ef">=</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Server</span><span style="color:#f92672">.</span>serve<span style="color:#f92672">(</span>app<span style="color:#f92672">).</span>provide<span style="color:#f92672">(</span><span style="color:#a6e22e">Server</span><span style="color:#f92672">.</span>default<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p>这里通过<code>Http.collect[Request]</code>的方式进行<code>pattern match</code>模式匹配设置路由和对应的处理逻辑。由于我们使用了<code>zio</code>，会换成<code>zio-http</code>提供的<code>Http.collectZio[Request]</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio.json._
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> httpApp<span style="color:#f92672">(</span>userRepository<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">UserRepository</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Http</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">Nothing</span>, <span style="color:#66d9ef">Request</span>, <span style="color:#66d9ef">Response</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">Http</span><span style="color:#f92672">.</span>collectZIO<span style="color:#f92672">[</span><span style="color:#66d9ef">Request</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">Method</span><span style="color:#f92672">.</span><span style="color:#a6e22e">GET</span> <span style="color:#f92672">-&gt;</span> <span style="color:#a6e22e">Root</span> <span style="color:#f92672">/</span> <span style="color:#e6db74">&#34;user&#34;</span> <span style="color:#f92672">/</span> <span style="color:#e6db74">&#34;list&#34;</span> <span style="color:#66d9ef">=&gt;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">val</span> response <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">for</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>        worlds <span style="color:#66d9ef">&lt;-</span> userRepository
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">.</span>listUser
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">.</span>mapError<span style="color:#f92672">(</span>e <span style="color:#66d9ef">=&gt;</span> <span style="color:#a6e22e">ErrorMsg</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;INTERNAL_ERROR&#34;</span><span style="color:#f92672">,</span> e<span style="color:#f92672">.</span>getMessage<span style="color:#f92672">))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">}</span> <span style="color:#66d9ef">yield</span> <span style="color:#a6e22e">Response</span><span style="color:#f92672">.</span>json<span style="color:#f92672">(</span>worlds<span style="color:#f92672">.</span>toJson<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>      response
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">.</span>catchAll<span style="color:#f92672">(</span>errorMsg <span style="color:#66d9ef">=&gt;</span> <span style="color:#a6e22e">ZIO</span><span style="color:#f92672">.</span>succeed<span style="color:#f92672">(</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#a6e22e">Response</span><span style="color:#f92672">.</span>json<span style="color:#f92672">(</span>errorMsg<span style="color:#f92672">.</span>toJson<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p>这里展通过访问数据库获取<code>User</code>列表，进行序列化后返回<code>Response</code>。自定义的<code>ErrorMsg</code>代表请求失败时的响应。<code>toJson</code>是<code>zio-json</code>库提供的功能，将<code>case class</code>序化列成<code>json</code>。</p>
+<h2 id="日志">日志<a hidden class="anchor" aria-hidden="true" href="#日志">#</a></h2>
+<p>引入依赖</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span>    libraryDependencies <span style="color:#f92672">++=</span> <span style="color:#a6e22e">Seq</span><span style="color:#f92672">(</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;dev.zio&#34;</span> <span style="color:#f92672">%%</span> <span style="color:#e6db74">&#34;zio-logging&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;2.1.13&#34;</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;dev.zio&#34;</span> <span style="color:#f92672">%%</span> <span style="color:#e6db74">&#34;zio-logging-slf4j2&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;2.1.13&#34;</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;org.slf4j&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;slf4j-api&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;2.0.7&#34;</span><span style="color:#f92672">,</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;ch.qos.logback&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;logback-classic&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;1.4.8&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">)</span>
+</span></span></code></pre></div><p>在<code>Main.scala</code>中将<code>ZIO.log</code>的默认实现替换为<code>zio-logging</code>提供的组件。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio.logging.backend.SLF4J
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">object</span> <span style="color:#a6e22e">Main</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">ZIOAppDefault</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">val</span> bootstrap<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">ZLayer</span><span style="color:#f92672">[</span><span style="color:#66d9ef">ZIOAppArgs</span>, <span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">Any</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Runtime</span><span style="color:#f92672">.</span>removeDefaultLoggers <span style="color:#f92672">&gt;&gt;&gt;</span> <span style="color:#a6e22e">SLF4J</span><span style="color:#f92672">.</span>slf4j
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p>日志接口使用<code>slf4j</code>，实现使用<code>logback</code>。同时<code>zio</code>有自己的<code>log</code>操作符，我们添加<code>zio-logging-slf4j2</code>依赖将背后的实现替换为<code>slf4j</code>，这样我们在调用<code>ZIO.log(&quot;xxx&quot;)</code>时就会使用<code>logback</code>。</p>
+<h2 id="zio-http-middleware">zio-http middleware<a hidden class="anchor" aria-hidden="true" href="#zio-http-middleware">#</a></h2>
+<p><code>zio-http middleware</code>是<code>zio-http</code>功能的扩展点，如果我们想要实现打印请求响应、链路追踪、超时和重试等功能，<code>zio-http middleware</code>就是一个非常良好的实现方式。</p>
+<p>简单写一个在<code>response</code>里添加响应时间的<code>middleware</code>并通过<code>@@</code>操作符绑定到<code>httpApp</code>上。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio.http._
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio.<span style="color:#f92672">{</span><span style="color:#a6e22e">Trace</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ZIO</span><span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ResponseTimeMiddleware</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">RequestHandlerMiddleware</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Simple</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">Nothing</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">def</span> apply<span style="color:#f92672">[</span><span style="color:#66d9ef">R1</span> <span style="color:#66d9ef">&lt;:</span> <span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">Err1</span> <span style="color:#66d9ef">&gt;:</span> <span style="color:#66d9ef">Nothing</span><span style="color:#f92672">](</span>
+</span></span><span style="display:flex;"><span>      handler<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Handler</span><span style="color:#f92672">[</span><span style="color:#66d9ef">R1</span>, <span style="color:#66d9ef">Err1</span>, <span style="color:#66d9ef">Request</span>, <span style="color:#66d9ef">Response</span><span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">)(</span><span style="color:#66d9ef">implicit</span> trace<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Trace</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Handler</span><span style="color:#f92672">[</span><span style="color:#66d9ef">R1</span>, <span style="color:#66d9ef">Err1</span>, <span style="color:#66d9ef">Request</span>, <span style="color:#66d9ef">Response</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Handler</span><span style="color:#f92672">.</span>fromFunctionZIO<span style="color:#f92672">[</span><span style="color:#66d9ef">Request</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span> request <span style="color:#66d9ef">=&gt;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">for</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>        startTime <span style="color:#66d9ef">&lt;-</span> <span style="color:#a6e22e">ZIO</span><span style="color:#f92672">.</span>succeed<span style="color:#f92672">(</span><span style="color:#a6e22e">System</span><span style="color:#f92672">.</span>currentTimeMillis<span style="color:#f92672">())</span>
+</span></span><span style="display:flex;"><span>        response <span style="color:#66d9ef">&lt;-</span> handler<span style="color:#f92672">.</span>runZIO<span style="color:#f92672">(</span>request<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>        endTime <span style="color:#66d9ef">&lt;-</span> <span style="color:#a6e22e">ZIO</span><span style="color:#f92672">.</span>succeed<span style="color:#f92672">(</span><span style="color:#a6e22e">System</span><span style="color:#f92672">.</span>currentTimeMillis<span style="color:#f92672">())</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">}</span> <span style="color:#66d9ef">yield</span> response<span style="color:#f92672">.</span>addHeader<span style="color:#f92672">(</span><span style="color:#a6e22e">Header</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Custom</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;X-Response-Time&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">s&#34;</span><span style="color:#e6db74">${</span>endTime <span style="color:#f92672">-</span> startTime<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">object</span> <span style="color:#a6e22e">Main</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">ZIOAppDefault</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">val</span> run <span style="color:#66d9ef">=</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">val</span> responseTimeMiddleware <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">ResponseTimeMiddleware</span><span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Server</span><span style="color:#f92672">.</span>serve<span style="color:#f92672">(</span>app <span style="color:#f92672">@@</span> responseTimeMiddleware<span style="color:#f92672">).</span>provide<span style="color:#f92672">(</span><span style="color:#a6e22e">Server</span><span style="color:#f92672">.</span>default<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><h2 id="实现一个简单的日志链路追踪">实现一个简单的日志链路追踪<a hidden class="anchor" aria-hidden="true" href="#实现一个简单的日志链路追踪">#</a></h2>
+<p>日志链路追踪是web后端服务常见的需求之一，我们已经了解了<code>zio-http middleware</code>和<code>zio-logging</code>的基础用法，现在结合二者的能力实现请求级别的日志链路追踪。</p>
+<p>首先要复习下<code>zio</code>中的一个概念<code>ZIOAspect</code>，正如其名字aspect名字“切面”所言，一个<code>ZIOAspect</code>可以包裹住一个<code>ZIO</code>调用并进行某种操作，常见的有日志、重试等。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-scala" data-lang="scala"><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio.http._
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio.logging.LogAnnotation
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">import</span> zio.<span style="color:#f92672">{</span><span style="color:#a6e22e">Trace</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">ZIO</span><span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">import</span> java.util.UUID
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LoggingMiddleware</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">RequestHandlerMiddleware</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Simple</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">Nothing</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">def</span> apply<span style="color:#f92672">[</span><span style="color:#66d9ef">R1</span> <span style="color:#66d9ef">&lt;:</span> <span style="color:#66d9ef">Any</span>, <span style="color:#66d9ef">Err1</span> <span style="color:#66d9ef">&gt;:</span> <span style="color:#66d9ef">Nothing</span><span style="color:#f92672">](</span>
+</span></span><span style="display:flex;"><span>      handler<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Handler</span><span style="color:#f92672">[</span><span style="color:#66d9ef">R1</span>, <span style="color:#66d9ef">Err1</span>, <span style="color:#66d9ef">Request</span>, <span style="color:#66d9ef">Response</span><span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">)(</span><span style="color:#66d9ef">implicit</span> trace<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Trace</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Handler</span><span style="color:#f92672">[</span><span style="color:#66d9ef">R1</span>, <span style="color:#66d9ef">Err1</span>, <span style="color:#66d9ef">Request</span>, <span style="color:#66d9ef">Response</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Handler</span><span style="color:#f92672">.</span>fromFunctionZIO<span style="color:#f92672">[</span><span style="color:#66d9ef">Request</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span> request <span style="color:#66d9ef">=&gt;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">val</span> h <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">for</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">_</span> <span style="color:#66d9ef">&lt;-</span> <span style="color:#a6e22e">ZIO</span><span style="color:#f92672">.</span>log<span style="color:#f92672">(</span>request<span style="color:#f92672">.</span>url<span style="color:#f92672">.</span>path<span style="color:#f92672">.</span>toString<span style="color:#f92672">())</span>
+</span></span><span style="display:flex;"><span>        response <span style="color:#66d9ef">&lt;-</span> handler<span style="color:#f92672">.</span>runZIO<span style="color:#f92672">(</span>request<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">}</span> <span style="color:#66d9ef">yield</span> response
+</span></span><span style="display:flex;"><span>      h <span style="color:#f92672">@@</span> <span style="color:#a6e22e">LogAnnotation</span><span style="color:#f92672">.</span><span style="color:#a6e22e">TraceId</span><span style="color:#f92672">(</span><span style="color:#a6e22e">UUID</span><span style="color:#f92672">.</span>randomUUID<span style="color:#f92672">())</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p>这里调用<code>LogAnnotation.TraceId()</code>就是创建了一个<code>ZIOAspect</code>，具体作用是向这个<code>Aspect</code>中的日志上下文添加了<code>traceId=XXX</code>的信息，这样被包裹的<code>ZIO</code>操作中的<code>ZIO.log</code>就可以拿到相关信息并添加到日志中。</p>
+<p>这里日志系统的实现实际使用的是<code>logback</code>，<code>zio-logging</code>会向<code>%kvp</code>中添加我们传递的<code>traceId</code>上下文，我们将<code>%kvp</code>添加进<code>logback.xml</code>的<code>pattern</code>中。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-xml" data-lang="xml"><span style="display:flex;"><span><span style="color:#f92672">&lt;configuration&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&lt;appender</span> <span style="color:#a6e22e">name=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span> <span style="color:#a6e22e">class=</span><span style="color:#e6db74">&#34;ch.qos.logback.core.ConsoleAppender&#34;</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&lt;encoder&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&lt;pattern&gt;</span>[%level] [%kvp] - %msg %n<span style="color:#f92672">&lt;/pattern&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&lt;/encoder&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&lt;/appender&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&lt;root</span> <span style="color:#a6e22e">level=</span><span style="color:#e6db74">&#34;INFO&#34;</span><span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&lt;appender-ref</span> <span style="color:#a6e22e">ref=</span><span style="color:#e6db74">&#34;STDOUT&#34;</span><span style="color:#f92672">/&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&lt;/root&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&lt;/configuration&gt;</span>
+</span></span></code></pre></div><p>添加后，我们发起请求后就可以看到携带有<code>traceId</code>的日志，第一条日志是<code>middleware</code>打印的。并且我们在<code>Http.collectZIO[Request]</code>中调用<code>ZIO.log</code>也会打印<code>traceId</code>，因为已经被<code>ZIOAspect</code>包裹起来了，可以拿到上下文，第二条日志就是如此。</p>
+<pre tabindex="0"><code>[INFO] [trace_id=&#34;2dbf5bd2-a856-4d21-945c-b42a08f3bdc0&#34;] - /user/list
 [INFO] [trace_id=&#34;2dbf5bd2-a856-4d21-945c-b42a08f3bdc0&#34;] - return 2 worlds
-</code></pre><p>需要再强调一遍，我们在<code>middleware</code>添加的<code>ZIOAspect</code>上下文是请求级别的，请求之间并不共享。</p><h2 id=end>end<a hidden class=anchor aria-hidden=true href=#end>#</a></h2><p>想要获取完整代码请访问 <a href=https://github.com/gcnyin/zio-http-quill-demo>https://github.com/gcnyin/zio-http-quill-demo</a></p></div><footer class=post-footer><ul class=post-tags><li><a href=https://xiangzi.me/tags/scala/>scala</a></li></ul></footer></article></main><footer class=footer><span>&copy; 2023 <a href=https://xiangzi.me/>箱子的博客</a></span>
-<span>Powered by
-<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
-        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg></a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
+</code></pre><p>需要再强调一遍，我们在<code>middleware</code>添加的<code>ZIOAspect</code>上下文是请求级别的，请求之间并不共享。</p>
+<h2 id="end">end<a hidden class="anchor" aria-hidden="true" href="#end">#</a></h2>
+<p>想要获取完整代码请访问 <a href="https://github.com/gcnyin/zio-http-quill-demo">https://github.com/gcnyin/zio-http-quill-demo</a></p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://xiangzi.me/tags/scala/">scala</a></li>
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="https://xiangzi.me/">箱子的博客</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>
