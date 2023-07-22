@@ -5,11 +5,14 @@ categories:
 - 技术
 tags:
 - scala
+- zio
 ---
 
 > 本文面向有一定`scala`和`zio`基础的读者。
 
 [zio](https://zio.dev/)是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在`scala`社区中逐渐流行。[zio-http](https://zio.dev/zio-http/)是zio生态中的http库，原本是非官方项目，前段时间获得了`zio`官方支持。[quill](https://zio.dev/zio-quill/)是zio生态中的数据库操作库，支持主流关系型数据库，当初转投`zio`社区还引发了不小的风波。
+
+本文旨在提供一套基于`zio`生态的http服务快速开发方式。
 
 ## 访问数据库
 
@@ -48,7 +51,8 @@ object Main extends ZIOAppDefault {
 使用`quill`读取上面的db配置，创建数据源`DataSource`。这里的`ZLayer`是`zio`提供的依赖管理工具，类型参数有三个，第一个代表了依赖的项，第二个代表了创建依赖过程中可能抛出的错误类型，第三个代表了最终创建出的项。这里第一个参数是`Any`代表不依赖其他任何项就可以创建`DataSource`。
 
 ```scala
-val dsLayer: ZLayer[Any, Throwable, DataSource] = Quill.DataSource.fromPrefix("db")
+val dsLayer: ZLayer[Any, Throwable, DataSource] =
+  Quill.DataSource.fromPrefix("db")
 ```
 
 接口创建`quill context`用于编译和运行时使用。通过ZLayer的类型参数可以很容易地看出它依赖了`DataSource`才能成功创建`quill context`。
@@ -76,7 +80,7 @@ create table "user"
 );
 ```
 
-我们可以在程序中创建一个`case class`映射到这张表上，并通过`quill context`引入相关数据库操作符。
+我们可以在程序中创建一个同名`case class`映射到这张表上，并通过`quill context`引入相关数据库操作符。
 
 ```scala
 final case class User(userId: Int, username: String, password: String)
@@ -85,7 +89,7 @@ final case class UserRepository(quill: Quill.Postgres[CompositeNamingStrategy2[S
 
   import quill._
 
-  override def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User])
+  def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User])
 }
 
 object UserRepository {
@@ -98,7 +102,7 @@ object UserRepository {
 
 ```
 [info] /zio-http-quill-demo/src/main/scala/example/repository/UserRepository.scala:14:65: SELECT x."user_id" AS userId, x."username" AS username, x."password" AS password FROM "user" x
-[info]   override def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User])
+[info]   def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User])
 ```
 
 到这里，数据库访问的相关工作已经基本就绪。
@@ -132,7 +136,7 @@ object Main extends ZIOAppDefault {
 }
 ```
 
-这里通过`Http.collect[Request]`的方式进行`pattern match`模式匹配设置路由和对应的处理逻辑。由于我们使用了`zio`，会换成`zio-http`提供的`Http.collectZio[Request]`。
+这里`Http.collect[Request]`通过`pattern match`模式匹配设置路由和对应的处理逻辑。由于我们使用了`zio`，会换成`zio-http`提供的`Http.collectZio[Request]`。
 
 ```scala
 import zio.json._
@@ -216,7 +220,7 @@ object Main extends ZIOAppDefault {
 
 日志链路追踪是web后端服务常见的需求之一，我们已经了解了`zio-http middleware`和`zio-logging`的基础用法，现在结合二者的能力实现请求级别的日志链路追踪。
 
-首先要复习下`zio`中的一个概念`ZIOAspect`，正如其名字aspect名字“切面”所言，一个`ZIOAspect`可以包裹住一个`ZIO`调用并进行某种操作，常见的有日志、重试等。
+首先要复习下`zio`中的一个概念`ZIOAspect`，正如其名字aspect名字“切面”所言，可以包裹住一个`ZIO`调用并进行某种操作，常见的有日志、重试等。
 
 ```scala
 import zio.http._
@@ -241,18 +245,18 @@ class LoggingMiddleware extends RequestHandlerMiddleware.Simple[Any, Nothing] {
 
 这里调用`LogAnnotation.TraceId()`就是创建了一个`ZIOAspect`，具体作用是向这个`Aspect`中的日志上下文添加了`traceId=XXX`的信息，这样被包裹的`ZIO`操作中的`ZIO.log`就可以拿到相关信息并添加到日志中。
 
-这里日志系统的实现实际使用的是`logback`，`zio-logging`会向`%kvp`中添加我们传递的`traceId`上下文，我们将`%kvp`添加进`logback.xml`的`pattern`中。
+日志系统的底层是`logback`，`zio-logging`会向`%kvp`中添加我们传递的`traceId`上下文，我们将`%kvp`添加进`logback.xml`的`pattern`中。
 
 ```xml
 <configuration>
-<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-<encoder>
-<pattern>[%level] [%kvp] - %msg %n</pattern>
-</encoder>
-</appender>
-<root level="INFO">
-<appender-ref ref="STDOUT"/>
-</root>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>[%level] [%kvp] - %msg %n</pattern>
+    </encoder>
+  </appender>
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
 </configuration>
 ```
 
@@ -260,10 +264,10 @@ class LoggingMiddleware extends RequestHandlerMiddleware.Simple[Any, Nothing] {
 
 ```
 [INFO] [trace_id="2dbf5bd2-a856-4d21-945c-b42a08f3bdc0"] - /user/list
-[INFO] [trace_id="2dbf5bd2-a856-4d21-945c-b42a08f3bdc0"] - return 2 worlds
+[INFO] [trace_id="2dbf5bd2-a856-4d21-945c-b42a08f3bdc0"] - return 2 users
 ```
 
-需要再强调一遍，我们在`middleware`添加的`ZIOAspect`上下文是请求级别的，请求之间并不共享。
+需要注意，我们在`middleware`添加的`ZIOAspect`上下文是请求级别的，请求之间并不共享。
 
 ## end
 
