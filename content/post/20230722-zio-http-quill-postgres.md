@@ -7,20 +7,21 @@ tags:
 - scala
 ---
 
-[zio](https://zio.dev/)是用Scala语言开发的一套框架，核心功能是并发管理和资源管理。[zio-http](https://zio.dev/zio-http/)是zio生态中的http库。[quill](https://zio.dev/zio-quill/)是zio生态中的数据库操作库，支持主流关系型数据库。
+> 本文面向有一定`scala`和`zio`基础的读者。
 
-基于sbt创建项目，并引入相关依赖。
+[zio](https://zio.dev/)是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在`scala`社区中逐渐流行。[zio-http](https://zio.dev/zio-http/)是zio生态中的http库，原本是非官方项目，前段时间获得了`zio`官方支持。[quill](https://zio.dev/zio-quill/)是zio生态中的数据库操作库，支持主流关系型数据库，当初转投`zio`社区还引发了不小的风波。
+
+## 访问数据库
+
+引入依赖
 
 ```scala
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % "2.0.15",
-      "dev.zio" %% "zio-http" % "3.0.0-RC2",
       "io.getquill" %% "quill-jdbc-zio" % "4.6.1",
       "org.postgresql" % "postgresql" % "42.5.4"
     )
 ```
-
-## 访问数据库
 
 向`resources`目录里添加`application.conf`文件，填写数据库连接配置。
 
@@ -96,13 +97,22 @@ object UserRepository {
 这里的`query[User]`会在编译器生成对应的SQL，尝试编译下即可在命令行里看到。
 
 ```
-[info] /Users/gcnyin/dev/scala/zio-http-quill-demo/src/main/scala/example/repository/UserRepositoryImpl.scala:14:65: SELECT x."user_id" AS userId, x."username" AS username, x."password" AS password FROM "user" x
+[info] /zio-http-quill-demo/src/main/scala/example/repository/UserRepository.scala:14:65: SELECT x."user_id" AS userId, x."username" AS username, x."password" AS password FROM "user" x
 [info]   override def listUser: ZIO[Any, SQLException, Seq[User]] = run(query[User])
 ```
 
 到这里，数据库访问的相关工作已经基本就绪。
 
 ## http服务
+
+引入依赖
+
+```scala
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-http" % "3.0.0-RC2",
+      "dev.zio" %% "zio-json" % "0.6.0",
+    )
+```
 
 `zio-http`底层使用`netty`，有较好的性能，编写时也很方便。下面是一个最简单的demo。
 
@@ -131,13 +141,130 @@ def httpApp(userRepository: UserRepository): Http[Any, Nothing, Request, Respons
   Http.collectZIO[Request] {
     case Method.GET -> Root / "user" / "list" =>
       val response = for {
-        worlds <- userRepository.listUser.mapError(e => ErrorMsg("INTERNAL_ERROR", e.getMessage))
+        worlds <- userRepository
+          .listUser
+          .mapError(e => ErrorMsg("INTERNAL_ERROR", e.getMessage))
       } yield Response.json(worlds.toJson)
-      response.catchAll(errorMsg => ZIO.succeed(Response.json(errorMsg.toJson)))
+      response
+        .catchAll(errorMsg => ZIO.succeed(
+          Response.json(errorMsg.toJson)
+        ))
   }
 }
 ```
 
 这里展通过访问数据库获取`User`列表，进行序列化后返回`Response`。自定义的`ErrorMsg`代表请求失败时的响应。`toJson`是`zio-json`库提供的功能，将`case class`序化列成`json`。
 
-完整代码请访问 https://github.com/gcnyin/zio-http-quill-demo 。
+## 日志
+
+引入依赖
+
+```scala
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-logging" % "2.1.13",
+      "dev.zio" %% "zio-logging-slf4j2" % "2.1.13",
+      "org.slf4j" % "slf4j-api" % "2.0.7",
+      "ch.qos.logback" % "logback-classic" % "1.4.8"
+    )
+```
+
+在`Main.scala`中将`ZIO.log`的默认实现替换为`zio-logging`提供的组件。
+
+```scala
+import zio.logging.backend.SLF4J
+
+object Main extends ZIOAppDefault {
+  override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
+    Runtime.removeDefaultLoggers >>> SLF4J.slf4j
+}
+```
+
+日志接口使用`slf4j`，实现使用`logback`。同时`zio`有自己的`log`操作符，我们添加`zio-logging-slf4j2`依赖将背后的实现替换为`slf4j`，这样我们在调用`ZIO.log("xxx")`时就会使用`logback`。
+
+## zio-http middleware
+
+`zio-http middleware`是`zio-http`功能的扩展点，如果我们想要实现打印请求响应、链路追踪、超时和重试等功能，`zio-http middleware`就是一个非常良好的实现方式。
+
+简单写一个在`response`里添加响应时间的`middleware`并通过`@@`操作符绑定到`httpApp`上。
+
+```scala
+import zio.http._
+import zio.{Trace, ZIO}
+
+class ResponseTimeMiddleware extends RequestHandlerMiddleware.Simple[Any, Nothing] {
+  override def apply[R1 <: Any, Err1 >: Nothing](
+      handler: Handler[R1, Err1, Request, Response]
+  )(implicit trace: Trace): Handler[R1, Err1, Request, Response] =
+    Handler.fromFunctionZIO[Request] { request =>
+      for {
+        startTime <- ZIO.succeed(System.currentTimeMillis())
+        response <- handler.runZIO(request)
+        endTime <- ZIO.succeed(System.currentTimeMillis())
+      } yield response.addHeader(Header.Custom("X-Response-Time", s"${endTime - startTime}"))
+    }
+}
+
+object Main extends ZIOAppDefault {
+  override val run = {
+    val responseTimeMiddleware = new ResponseTimeMiddleware()
+    Server.serve(app @@ responseTimeMiddleware).provide(Server.default)
+  }
+}
+```
+
+## 实现一个简单的日志链路追踪
+
+日志链路追踪是web后端服务常见的需求之一，我们已经了解了`zio-http middleware`和`zio-logging`的基础用法，现在结合二者的能力实现请求级别的日志链路追踪。
+
+首先要复习下`zio`中的一个概念`ZIOAspect`，正如其名字aspect名字“切面”所言，一个`ZIOAspect`可以包裹住一个`ZIO`调用并进行某种操作，常见的有日志、重试等。
+
+```scala
+import zio.http._
+import zio.logging.LogAnnotation
+import zio.{Trace, ZIO}
+
+import java.util.UUID
+
+class LoggingMiddleware extends RequestHandlerMiddleware.Simple[Any, Nothing] {
+  override def apply[R1 <: Any, Err1 >: Nothing](
+      handler: Handler[R1, Err1, Request, Response]
+  )(implicit trace: Trace): Handler[R1, Err1, Request, Response] =
+    Handler.fromFunctionZIO[Request] { request =>
+      val h = for {
+        _ <- ZIO.log(request.url.path.toString())
+        response <- handler.runZIO(request)
+      } yield response
+      h @@ LogAnnotation.TraceId(UUID.randomUUID())
+    }
+}
+```
+
+这里调用`LogAnnotation.TraceId()`就是创建了一个`ZIOAspect`，具体作用是向这个`Aspect`中的日志上下文添加了`traceId=XXX`的信息，这样被包裹的`ZIO`操作中的`ZIO.log`就可以拿到相关信息并添加到日志中。
+
+这里日志系统的实现实际使用的是`logback`，`zio-logging`会向`%kvp`中添加我们传递的`traceId`上下文，我们将`%kvp`添加进`logback.xml`的`pattern`中。
+
+```xml
+<configuration>
+<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+<encoder>
+<pattern>[%level] [%kvp] - %msg %n</pattern>
+</encoder>
+</appender>
+<root level="INFO">
+<appender-ref ref="STDOUT"/>
+</root>
+</configuration>
+```
+
+添加后，我们发起请求后就可以看到携带有`traceId`的日志，第一条日志是`middleware`打印的。并且我们在`Http.collectZIO[Request]`中调用`ZIO.log`也会打印`traceId`，因为已经被`ZIOAspect`包裹起来了，可以拿到上下文，第二条日志就是如此。
+
+```
+[INFO] [trace_id="2dbf5bd2-a856-4d21-945c-b42a08f3bdc0"] - /user/list
+[INFO] [trace_id="2dbf5bd2-a856-4d21-945c-b42a08f3bdc0"] - return 2 worlds
+```
+
+需要再强调一遍，我们在`middleware`添加的`ZIOAspect`上下文是请求级别的，请求之间并不共享。
+
+## end
+
+想要获取完整代码请访问 https://github.com/gcnyin/zio-http-quill-demo
