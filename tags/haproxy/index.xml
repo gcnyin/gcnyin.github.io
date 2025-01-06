@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>haproxy on 箱子的博客</title>
+    <title>Haproxy on 箱子的博客</title>
     <link>https://xiangzi.me/tags/haproxy/</link>
-    <description>Recent content in haproxy on 箱子的博客</description>
-    <generator>Hugo -- gohugo.io</generator>
+    <description>Recent content in Haproxy on 箱子的博客</description>
+    <generator>Hugo -- 0.125.7</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 26 Dec 2020 00:00:00 +0800</lastBuildDate><atom:link href="https://xiangzi.me/tags/haproxy/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 26 Dec 2020 00:00:00 +0800</lastBuildDate>
+    <atom:link href="https://xiangzi.me/tags/haproxy/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>使用haproxy，nginx与aria2搭建下载服务</title>
       <link>https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/</link>
       <pubDate>Sat, 26 Dec 2020 00:00:00 +0800</pubDate>
-      
       <guid>https://xiangzi.me/post/20201226-haproxy-nginx-and-aria2/</guid>
       <description>最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostnam</description>
     </item>
-    
   </channel>
 </rss>

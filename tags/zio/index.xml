@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>zio on 箱子的博客</title>
+    <title>Zio on 箱子的博客</title>
     <link>https://xiangzi.me/tags/zio/</link>
-    <description>Recent content in zio on 箱子的博客</description>
-    <generator>Hugo -- gohugo.io</generator>
+    <description>Recent content in Zio on 箱子的博客</description>
+    <generator>Hugo -- 0.125.7</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 22 Jul 2023 00:53:32 +0800</lastBuildDate><atom:link href="https://xiangzi.me/tags/zio/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 22 Jul 2023 00:53:32 +0800</lastBuildDate>
+    <atom:link href="https://xiangzi.me/tags/zio/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>使用zio-http, quill与postgres开发web服务</title>
       <link>https://xiangzi.me/post/20230722-zio-http-quill-postgres/</link>
       <pubDate>Sat, 22 Jul 2023 00:53:32 +0800</pubDate>
-      
       <guid>https://xiangzi.me/post/20230722-zio-http-quill-postgres/</guid>
       <description>本文面向有一定scala和zio基础的读者。 zio是用Scala语言开发的一套框架，核心功能是并发管理和资源管理，近年来在scala社区中逐</description>
     </item>
-    
   </channel>
 </rss>
