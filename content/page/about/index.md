@@ -1,14 +1,11 @@
 ---
 title: About
-description: scala爱好者，兼职大数据工程师
-date: '2022-08-01'
-license: CC BY-SA
-lastmod: '2020-10-09'
 menu:
     main: 
-        weight: -90
+        weight: 50
         params:
             icon: user
+comment: false
 ---
 
-干过Java后端、Scala后端、实时数仓、离线数仓。
+充满好奇心的程序员。

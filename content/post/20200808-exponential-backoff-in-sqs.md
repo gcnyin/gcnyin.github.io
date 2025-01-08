@@ -1,8 +1,11 @@
 ---
 title: "AWS SQS如何实现指数退避"
 date: 2020-08-08T16:35:20+08:00
+categories:
+- 技术
 tags:
 - aws
+- nodejs
 ---
 
 SQS 全称 Simple queue service，是 AWS 推出一款消息队列服务。按照 AWS 官方文档的说法，SQS 居有高吞吐、高可用的特性。从我个人的开发体验来看，SQS 是一款相当易用并且功能强大的消息队列服务，满足了生产使用的大部分需求。

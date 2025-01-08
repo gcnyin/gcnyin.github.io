@@ -1,8 +1,10 @@
 ---
 title: "使用haproxy，nginx与aria2搭建下载服务"
 date: 2020-12-26T00:00:00+08:00
+categories:
+- 技术
 tags:
-- nginx
+- haproxy
 ---
 
 最近搞了一台vps，用它搭建了一个远程下载服务（网盘），包括aria2做下载工具，nginx做静态文件服务，haproxy根据hostname做代理。

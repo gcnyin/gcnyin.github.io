@@ -1,6 +1,8 @@
 ---
 title: "AsyncLocalStorage与日志追踪"
 date: 2020-06-25T19:26:00+08:00
+categories:
+- 技术
 tags:
 - nodejs
 ---

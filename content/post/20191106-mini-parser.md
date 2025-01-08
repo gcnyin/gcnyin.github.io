@@ -1,8 +1,10 @@
 ---
 title: "mini-parser小轮子"
 date: 2019-11-06T18:00:00+08:00
+categories:
+- 技术
 tags:
-- compiler
+- parser
 ---
 
 [代码链接](https://github.com/gcnyin/compiler/blob/master/mini-parser/index.ts)

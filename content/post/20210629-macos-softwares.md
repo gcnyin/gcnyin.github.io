@@ -1,8 +1,10 @@
 ---
 title: 我的macOS软件清单
 date: 2021-06-29T20:31:06+08:00
+categories:
+- 技术
 tags:
-- macos
+- mac
 ---
 
 工作后一直用MacBook Pro(15款和17款)，除了公司发的，自己也有一台，现在已经完全习惯了在macOS下开发。macOS下的各种工具基本都把玩了一遍，有一些非常顺手，格外喜欢，这里分享给大家。
@@ -101,6 +103,10 @@ macOS的原生窗口管理功能很少，必须用其他软件加强。rectangle
 
 - alfred4
 - hammerspoon（可以参考我的上一篇博文）
+
+# 其他工具
+
+- Hidden Bar https://github.com/dwarvesf/hidden. 当menu bar icons太多时可以用它来隐藏不需要的。
 
 # 总结
 

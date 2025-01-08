@@ -1,6 +1,8 @@
 ---
 title: "JVM if<cond>指令笔记"
 date: 2019-09-13T12:35:00+08:00
+categories:
+- 技术
 tags:
 - java
 ---

@@ -1,8 +1,10 @@
 ---
 title: "一套充分利用本地机器的日志中心架构"
 date: 2022-08-14T23:09:08+08:00
+categories:
+- 技术
 tags:
-- logging
+- k8s
 ---
 
 ![logging-architecture](/logging-architecture.png)

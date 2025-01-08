@@ -1,6 +1,8 @@
 ---
 title: "最近搭的一套离线数仓架构"
 date: 2022-08-07T21:18:13+08:00
+categories:
+- 技术
 tags:
 - data warehouse
 ---

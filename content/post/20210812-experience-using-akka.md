@@ -1,9 +1,11 @@
 ---
 title: 使用akka踩的一些坑
 date: 2021-08-12T11:06:25+08:00
+categories:
+- 技术
 tags:
-- scala
 - akka
+- scala
 ---
 
 最近在学习 akka，踩了很多坑，这里分享给大家。

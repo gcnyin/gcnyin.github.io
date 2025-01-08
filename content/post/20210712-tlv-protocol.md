@@ -1,6 +1,8 @@
 ---
 title: 浅谈TLV协议的实现
 date: 2021-07-12T22:10:50+08:00
+categories:
+- 技术
 tags:
 - network
 ---
