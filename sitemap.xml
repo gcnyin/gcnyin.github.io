@@ -2,18 +2,28 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://xiangzi.me/post/</loc>
-    <lastmod>2025-01-06T23:59:12+08:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url><url>
-    <loc>https://xiangzi.me/</loc>
-    <lastmod>2025-01-06T23:59:12+08:00</lastmod>
+    <loc>https://xiangzi.me/post/20250108-2024-review/</loc>
+    <lastmod>2025-01-08T12:00:00+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url><url>
     <loc>https://xiangzi.me/categories/</loc>
-    <lastmod>2023-07-22T00:53:32+08:00</lastmod>
+    <lastmod>2025-01-08T12:00:00+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://xiangzi.me/post/</loc>
+    <lastmod>2025-01-08T12:00:00+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://xiangzi.me/categories/%E5%B9%B4%E7%BB%88%E6%80%BB%E7%BB%93/</loc>
+    <lastmod>2025-01-08T12:00:00+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://xiangzi.me/</loc>
+    <lastmod>2025-01-08T12:00:00+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url><url>
@@ -44,21 +54,6 @@
   </url><url>
     <loc>https://xiangzi.me/post/20230104-2022-review/</loc>
     <lastmod>2023-01-04T01:07:17+08:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url><url>
-    <loc>https://xiangzi.me/categories/%E5%B9%B4%E7%BB%88%E6%80%BB%E7%BB%93/</loc>
-    <lastmod>2023-01-04T01:07:17+08:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url><url>
-    <loc>https://xiangzi.me/post/20221225-covid-cured-my-depression/</loc>
-    <lastmod>2022-12-25T16:31:30+08:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url><url>
-    <loc>https://xiangzi.me/categories/%E7%94%9F%E6%B4%BB%E6%84%9F%E6%82%9F/</loc>
-    <lastmod>2022-12-25T16:31:30+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url><url>

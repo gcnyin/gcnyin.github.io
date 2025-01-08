@@ -6,8 +6,15 @@
     <description>Recent content on 箱子的博客</description>
     <generator>Hugo -- 0.125.7</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 22 Jul 2023 00:53:32 +0800</lastBuildDate>
+    <lastBuildDate>Wed, 08 Jan 2025 12:00:00 +0800</lastBuildDate>
     <atom:link href="https://xiangzi.me/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>2024年度回顾</title>
+      <link>https://xiangzi.me/post/20250108-2024-review/</link>
+      <pubDate>Wed, 08 Jan 2025 12:00:00 +0800</pubDate>
+      <guid>https://xiangzi.me/post/20250108-2024-review/</guid>
+      <description>元旦夜里，鞭炮声吵四起。我睡不着，回想着过去一年发生了什么。 今年的关键词：远程办公、学会投资、接纳自己。 2023年时，因为各种原因，自己想要</description>
+    </item>
     <item>
       <title>使用zio-http, quill与postgres开发web服务</title>
       <link>https://xiangzi.me/post/20230722-zio-http-quill-postgres/</link>
@@ -21,13 +28,6 @@
       <pubDate>Wed, 04 Jan 2023 01:07:17 +0800</pubDate>
       <guid>https://xiangzi.me/post/20230104-2022-review/</guid>
       <description>生活 2022年，因为新冠，我的抑郁症终于好了，赞美太阳。具体情况见我上篇博文。 抑郁症好了后，感觉整个人对生活的状态都变了。我愿意面对生活的残</description>
-    </item>
-    <item>
-      <title>新冠治好了我的精神内耗</title>
-      <link>https://xiangzi.me/post/20221225-covid-cured-my-depression/</link>
-      <pubDate>Sun, 25 Dec 2022 16:31:30 +0800</pubDate>
-      <guid>https://xiangzi.me/post/20221225-covid-cured-my-depression/</guid>
-      <description>熟悉我的朋友可能知道我患有抑郁症，之前已经吃了几年的药了，但最近得了新冠后莫名其妙地好了，现在每天对生活都充满了希望。 以前抑郁的时候每天都感</description>
     </item>
     <item>
       <title>一套充分利用本地机器的日志中心架构</title>
