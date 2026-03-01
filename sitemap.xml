@@ -2,27 +2,32 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://xiangzi.me/post/20250108-2024-review/</loc>
-    <lastmod>2025-01-08T12:00:00+08:00</lastmod>
+    <loc>https://xiangzi.me/post/20260301-2025-review/</loc>
+    <lastmod>2026-03-01T12:00:00+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url><url>
     <loc>https://xiangzi.me/categories/</loc>
-    <lastmod>2025-01-08T12:00:00+08:00</lastmod>
+    <lastmod>2026-03-01T12:00:00+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url><url>
     <loc>https://xiangzi.me/post/</loc>
-    <lastmod>2025-01-08T12:00:00+08:00</lastmod>
+    <lastmod>2026-03-01T12:00:00+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url><url>
     <loc>https://xiangzi.me/categories/%E5%B9%B4%E7%BB%88%E6%80%BB%E7%BB%93/</loc>
-    <lastmod>2025-01-08T12:00:00+08:00</lastmod>
+    <lastmod>2026-03-01T12:00:00+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url><url>
     <loc>https://xiangzi.me/</loc>
+    <lastmod>2026-03-01T12:00:00+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://xiangzi.me/post/20250108-2024-review/</loc>
     <lastmod>2025-01-08T12:00:00+08:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>

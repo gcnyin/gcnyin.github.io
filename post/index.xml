@@ -6,8 +6,15 @@
     <description>Recent content in Posts on 箱子的博客</description>
     <generator>Hugo -- 0.125.7</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 08 Jan 2025 12:00:00 +0800</lastBuildDate>
+    <lastBuildDate>Sun, 01 Mar 2026 12:00:00 +0800</lastBuildDate>
     <atom:link href="https://xiangzi.me/post/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>2025年度回顾</title>
+      <link>https://xiangzi.me/post/20260301-2025-review/</link>
+      <pubDate>Sun, 01 Mar 2026 12:00:00 +0800</pubDate>
+      <guid>https://xiangzi.me/post/20260301-2025-review/</guid>
+      <description>一不小心三月了，被朋友催着写年度回顾才想起来这回事。 过去一年见证了 AI 如火如荼的发展，从年初的 deepseek 到年末大批编程 ai agent，从一开始的观望到年</description>
+    </item>
     <item>
       <title>2024年度回顾</title>
       <link>https://xiangzi.me/post/20250108-2024-review/</link>
